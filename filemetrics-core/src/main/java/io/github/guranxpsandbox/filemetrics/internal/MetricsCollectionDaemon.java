@@ -4,6 +4,7 @@ import io.github.guranxpsandbox.filemetrics.MetricsLogger;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Daemon thread that logs each default metric group on a fixed
@@ -19,7 +20,11 @@ public final class MetricsCollectionDaemon extends Thread {
     public MetricsCollectionDaemon(final MetricsLogger logger, final long intervalMillis) {
         super("filemetrics-collector");
         this.logger = logger;
-        this.collectors = Arrays.asList(new HeapMetricsCollector(), new ThreadMetricsCollector());
+        this.collectors = Arrays.asList(
+                new HeapMetricsCollector(),
+                new ThreadMetricsCollector(),
+                new MetaspaceMetricsCollector(),
+                new GcMetricsCollector());
         this.intervalMillis = intervalMillis;
         setDaemon(true);
     }
@@ -28,7 +33,9 @@ public final class MetricsCollectionDaemon extends Thread {
     public void run() {
         while (running) {
             for (final MetricsCollector collector : collectors) {
-                logger.log(collector.type(), collector.collect());
+                for (final Map<String, Object> values : collector.collect()) {
+                    logger.log(collector.type(), values);
+                }
             }
             sleepQuietly();
         }

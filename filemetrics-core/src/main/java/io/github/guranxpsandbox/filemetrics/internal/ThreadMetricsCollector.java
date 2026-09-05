@@ -2,7 +2,9 @@ package io.github.guranxpsandbox.filemetrics.internal;
 
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadMXBean;
+import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -16,13 +18,13 @@ public final class ThreadMetricsCollector implements MetricsCollector {
     }
 
     @Override
-    public Map<String, Object> collect() {
+    public List<Map<String, Object>> collect() {
         final ThreadMXBean threadMXBean = ManagementFactory.getThreadMXBean();
         final Map<String, Object> values = new LinkedHashMap<>();
         values.put("live", threadMXBean.getThreadCount());
         values.put("peak", threadMXBean.getPeakThreadCount());
         values.put("deadlocked", deadlockedCount(threadMXBean));
-        return values;
+        return Collections.singletonList(values);
     }
 
     private static int deadlockedCount(final ThreadMXBean threadMXBean) {

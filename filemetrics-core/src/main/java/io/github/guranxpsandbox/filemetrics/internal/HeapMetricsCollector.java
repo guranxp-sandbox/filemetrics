@@ -2,7 +2,9 @@ package io.github.guranxpsandbox.filemetrics.internal;
 
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryUsage;
+import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -10,24 +12,18 @@ import java.util.Map;
  */
 public final class HeapMetricsCollector implements MetricsCollector {
 
-    private static final long BYTES_PER_MB = 1024L * 1024L;
-
     @Override
     public String type() {
         return "heap";
     }
 
     @Override
-    public Map<String, Object> collect() {
+    public List<Map<String, Object>> collect() {
         final MemoryUsage usage = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
         final Map<String, Object> values = new LinkedHashMap<>();
-        values.put("used_mb", toMb(usage.getUsed()));
-        values.put("committed_mb", toMb(usage.getCommitted()));
-        values.put("max_mb", toMb(usage.getMax()));
-        return values;
-    }
-
-    static long toMb(final long bytes) {
-        return bytes < 0 ? -1L : bytes / BYTES_PER_MB;
+        values.put("used_mb", MemoryUnits.toMb(usage.getUsed()));
+        values.put("committed_mb", MemoryUnits.toMb(usage.getCommitted()));
+        values.put("max_mb", MemoryUnits.toMb(usage.getMax()));
+        return Collections.singletonList(values);
     }
 }

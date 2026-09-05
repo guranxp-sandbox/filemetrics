@@ -2,6 +2,7 @@ package io.github.guranxpsandbox.filemetrics.internal;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -17,9 +18,14 @@ class ThreadMetricsCollectorTest {
     }
 
     @Test
+    void shouldCollectExactlyOneValuesGroup() {
+        assertEquals(1, collector.collect().size());
+    }
+
+    @Test
     void shouldCollectThreadValuesWithExpectedKeys() {
         // when
-        final Map<String, Object> values = collector.collect();
+        final Map<String, Object> values = onlyGroup();
 
         // then
         assertEquals(3, values.size());
@@ -31,7 +37,7 @@ class ThreadMetricsCollectorTest {
     @Test
     void shouldRespectThreadCountInvariants() {
         // when
-        final Map<String, Object> values = collector.collect();
+        final Map<String, Object> values = onlyGroup();
         final int live = (int) values.get("live");
         final int peak = (int) values.get("peak");
         final int deadlocked = (int) values.get("deadlocked");
@@ -44,10 +50,11 @@ class ThreadMetricsCollectorTest {
 
     @Test
     void shouldReportZeroDeadlockedThreadsInHealthyState() {
-        // when
-        final Map<String, Object> values = collector.collect();
+        assertEquals(0, onlyGroup().get("deadlocked"));
+    }
 
-        // then
-        assertEquals(0, values.get("deadlocked"));
+    private Map<String, Object> onlyGroup() {
+        final List<Map<String, Object>> groups = collector.collect();
+        return groups.get(0);
     }
 }

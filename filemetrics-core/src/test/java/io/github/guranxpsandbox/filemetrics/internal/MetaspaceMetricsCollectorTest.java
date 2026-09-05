@@ -8,13 +8,13 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class HeapMetricsCollectorTest {
+class MetaspaceMetricsCollectorTest {
 
-    private final HeapMetricsCollector collector = new HeapMetricsCollector();
+    private final MetaspaceMetricsCollector collector = new MetaspaceMetricsCollector();
 
     @Test
-    void shouldReportHeapAsType() {
-        assertEquals("heap", collector.type());
+    void shouldReportMetaspaceAsType() {
+        assertEquals("metaspace", collector.type());
     }
 
     @Test
@@ -23,15 +23,14 @@ class HeapMetricsCollectorTest {
     }
 
     @Test
-    void shouldCollectHeapValuesWithExpectedKeys() {
+    void shouldCollectMetaspaceValuesWithExpectedKeys() {
         // when
         final Map<String, Object> values = onlyGroup();
 
         // then
-        assertEquals(3, values.size());
+        assertEquals(2, values.size());
         assertTrue(values.containsKey("used_mb"));
         assertTrue(values.containsKey("committed_mb"));
-        assertTrue(values.containsKey("max_mb"));
     }
 
     @Test
@@ -40,12 +39,10 @@ class HeapMetricsCollectorTest {
         final Map<String, Object> values = onlyGroup();
         final long usedMb = (long) values.get("used_mb");
         final long committedMb = (long) values.get("committed_mb");
-        final long maxMb = (long) values.get("max_mb");
 
         // then
         assertTrue(usedMb >= 0);
         assertTrue(committedMb >= usedMb);
-        assertTrue(maxMb == -1 || maxMb >= committedMb);
     }
 
     private Map<String, Object> onlyGroup() {

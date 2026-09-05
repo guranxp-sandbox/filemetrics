@@ -3,6 +3,7 @@ package io.github.guranxpsandbox.filemetrics.internal;
 import io.github.guranxpsandbox.filemetrics.InMemoryMetricsLogger;
 import org.junit.jupiter.api.Test;
 
+import java.lang.management.ManagementFactory;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -58,6 +59,57 @@ class MetricsCollectionDaemonIT {
                 .collect(Collectors.toList());
         assertTrue(threadEntries.size() >= 2);
         assertTrue(threadEntries.get(0).values().containsKey("live"));
+    }
+
+    @Test
+    void shouldCollectMetaspaceMetricsPeriodically() throws InterruptedException {
+        // given
+        final InMemoryMetricsLogger logger = new InMemoryMetricsLogger();
+        final MetricsCollectionDaemon daemon =
+                new MetricsCollectionDaemon(logger, SHORT_INTERVAL_MILLIS);
+
+        // when
+        daemon.start();
+        try {
+            waitUntil(() -> countOfType(logger, "metaspace") >= 2);
+        } finally {
+            daemon.shutdown();
+        }
+
+        // then
+        final List<InMemoryMetricsLogger.LoggedMetric> metaspaceEntries = logger.entries().stream()
+                .filter(entry -> "metaspace".equals(entry.type()))
+                .collect(Collectors.toList());
+        assertTrue(metaspaceEntries.size() >= 2);
+        assertTrue(metaspaceEntries.get(0).values().containsKey("used_mb"));
+    }
+
+    @Test
+    void shouldCollectGcMetricsForEachCollectorBean() throws InterruptedException {
+        // given
+        final InMemoryMetricsLogger logger = new InMemoryMetricsLogger();
+        final MetricsCollectionDaemon daemon =
+                new MetricsCollectionDaemon(logger, SHORT_INTERVAL_MILLIS);
+        final long gcBeanCount = ManagementFactory.getGarbageCollectorMXBeans().size();
+
+        // when
+        daemon.start();
+        try {
+            waitUntil(() -> countOfType(logger, "gc") >= gcBeanCount);
+        } finally {
+            daemon.shutdown();
+        }
+
+        // then
+        final List<InMemoryMetricsLogger.LoggedMetric> gcEntries = logger.entries().stream()
+                .filter(entry -> "gc".equals(entry.type()))
+                .collect(Collectors.toList());
+        assertTrue(gcEntries.size() >= gcBeanCount);
+        for (final InMemoryMetricsLogger.LoggedMetric entry : gcEntries) {
+            assertTrue(entry.values().containsKey("name"));
+            assertTrue(entry.values().containsKey("count"));
+            assertTrue(entry.values().containsKey("time_ms"));
+        }
     }
 
     private static long countOfType(final InMemoryMetricsLogger logger, final String type) {
