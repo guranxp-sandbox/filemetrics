@@ -71,7 +71,9 @@ io.github.guranxpsandbox.filemetrics.internal ← non-public API
 - `InMemoryMetricsLogger` — done (inspectable, for tests)
 - `FileMetricsLogger` — done (writes one line per metric group; no
   rotation/cleanup/permissions yet)
-- `Metrics` (facade/entry point) — not started
+- `Metrics` (facade/entry point) — in progress: `start()`/`stop()`
+  resolve a `MetricsLogger` via ServiceLoader (`metrics.implementation`).
+  No periodic collection or JVM metrics yet.
 
 ## Workflow
 
