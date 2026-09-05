@@ -4,6 +4,7 @@ import io.github.guranxpsandbox.filemetrics.InMemoryMetricsLogger;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -24,16 +25,43 @@ class MetricsCollectionDaemonIT {
         // when
         daemon.start();
         try {
-            waitUntil(() -> logger.entries().size() >= 2);
+            waitUntil(() -> countOfType(logger, "heap") >= 2);
         } finally {
             daemon.shutdown();
         }
 
         // then
         final List<InMemoryMetricsLogger.LoggedMetric> entries = logger.entries();
-        assertTrue(entries.size() >= 2);
+        assertTrue(countOfType(logger, "heap") >= 2);
         assertEquals("heap", entries.get(0).type());
         assertTrue(entries.get(0).values().containsKey("used_mb"));
+    }
+
+    @Test
+    void shouldCollectThreadMetricsPeriodically() throws InterruptedException {
+        // given
+        final InMemoryMetricsLogger logger = new InMemoryMetricsLogger();
+        final MetricsCollectionDaemon daemon =
+                new MetricsCollectionDaemon(logger, SHORT_INTERVAL_MILLIS);
+
+        // when
+        daemon.start();
+        try {
+            waitUntil(() -> countOfType(logger, "threads") >= 2);
+        } finally {
+            daemon.shutdown();
+        }
+
+        // then
+        final List<InMemoryMetricsLogger.LoggedMetric> threadEntries = logger.entries().stream()
+                .filter(entry -> "threads".equals(entry.type()))
+                .collect(Collectors.toList());
+        assertTrue(threadEntries.size() >= 2);
+        assertTrue(threadEntries.get(0).values().containsKey("live"));
+    }
+
+    private static long countOfType(final InMemoryMetricsLogger logger, final String type) {
+        return logger.entries().stream().filter(entry -> type.equals(entry.type())).count();
     }
 
     @Test

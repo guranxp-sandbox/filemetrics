@@ -8,10 +8,16 @@ import java.util.Map;
 /**
  * Reads the current heap memory usage via {@link java.lang.management}.
  */
-public final class HeapMetricsCollector {
+public final class HeapMetricsCollector implements MetricsCollector {
 
     private static final long BYTES_PER_MB = 1024L * 1024L;
 
+    @Override
+    public String type() {
+        return "heap";
+    }
+
+    @Override
     public Map<String, Object> collect() {
         final MemoryUsage usage = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
         final Map<String, Object> values = new LinkedHashMap<>();

@@ -12,6 +12,11 @@ class HeapMetricsCollectorTest {
     private final HeapMetricsCollector collector = new HeapMetricsCollector();
 
     @Test
+    void shouldReportHeapAsType() {
+        assertEquals("heap", collector.type());
+    }
+
+    @Test
     void shouldCollectHeapValuesWithExpectedKeys() {
         // when
         final Map<String, Object> values = collector.collect();

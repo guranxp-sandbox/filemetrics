@@ -73,8 +73,8 @@ io.github.guranxpsandbox.filemetrics.internal ← non-public API
   rotation/cleanup/permissions yet)
 - `Metrics` (facade/entry point) — in progress: `start()`/`stop()`
   resolve a `MetricsLogger` via ServiceLoader (`metrics.implementation`)
-  and run a daemon thread collecting heap metrics every 60 minutes.
-  Metaspace/threads/GC, opt-in metrics, config API, and cleanup are
+  and run a daemon thread collecting heap and thread metrics every 60
+  minutes. Metaspace/GC, opt-in metrics, config API, and cleanup are
   not started yet.
 
 ## Workflow
