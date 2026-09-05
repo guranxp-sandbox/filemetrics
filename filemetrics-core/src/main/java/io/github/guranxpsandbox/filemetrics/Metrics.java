@@ -17,6 +17,8 @@ import java.time.Duration;
  * threads down and releases the logger. Safe to call repeatedly; never
  * throws to the caller. Use {@link #builder()} to configure the log
  * directory, interval, retention, or opt-in metrics.
+ * A JVM shutdown hook calls {@link #stop()} automatically, so an app
+ * that never calls it explicitly still shuts down cleanly.
  */
 public final class Metrics {
 
@@ -27,6 +29,12 @@ public final class Metrics {
     static volatile MetricsLogger activeLogger = new NoOpMetricsLogger();
     static volatile MetricsCollectionDaemon collectionDaemon;
     static volatile CleanupDaemon cleanupDaemon;
+
+    static final Thread shutdownHook = new Thread(Metrics::stop, "filemetrics-shutdown-hook");
+
+    static {
+        Runtime.getRuntime().addShutdownHook(shutdownHook);
+    }
 
     private Metrics() {
     }

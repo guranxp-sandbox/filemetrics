@@ -120,6 +120,31 @@ class MetricsIT {
     }
 
     @Test
+    void shouldRegisterShutdownHookWithRuntime() {
+        // when / then
+        assertTrue(Runtime.getRuntime().removeShutdownHook(Metrics.shutdownHook));
+
+        // restore, so the rest of the suite (and a real JVM exit) still
+        // gets the hook
+        Runtime.getRuntime().addShutdownHook(Metrics.shutdownHook);
+    }
+
+    @Test
+    void shouldStopViaShutdownHookWhenInvoked() throws InterruptedException {
+        // given
+        System.setProperty("metrics.implementation", "inmemory");
+        Metrics.start("order-service");
+        final Thread daemon = Metrics.collectionDaemon;
+
+        // when
+        Metrics.shutdownHook.run();
+        daemon.join(POLL_TIMEOUT_MILLIS);
+
+        // then
+        assertFalse(daemon.isAlive());
+    }
+
+    @Test
     void shouldThrowWhenBuilderStartedWithoutAppName() {
         assertThrows(IllegalStateException.class, () -> Metrics.builder().start());
     }

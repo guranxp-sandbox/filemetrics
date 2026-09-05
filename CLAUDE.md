@@ -84,7 +84,9 @@ io.github.guranxpsandbox.filemetrics.internal ← non-public API
   `MetricsLogger` via ServiceLoader (`metrics.implementation`), then
   run two daemon threads on the configured interval — one collecting
   all default and opt-in metrics, one deleting log files older than
-  `keepDays` (default 7). `Metrics.stop()` shuts both down.
+  `keepDays` (default 7). `Metrics.stop()` shuts both down, and a JVM
+  shutdown hook calls it automatically so an app that never calls
+  `stop()` explicitly still shuts down cleanly.
 
 ## Workflow
 
