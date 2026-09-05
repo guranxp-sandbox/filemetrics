@@ -85,7 +85,7 @@ Metrics.start("order-service");
 Metrics.builder()
     .appName("order-service")
     .logDir("/var/log/metrics")   // default: ./metrics
-    .interval(60, TimeUnit.MINUTES) // default: 60 min
+    .interval(Duration.ofMinutes(60)) // default: 60 min
     .keepDays(7)                   // default: 7 days
     .withDirectMemory()            // opt-in
     .withClassLoading()            // opt-in

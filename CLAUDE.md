@@ -71,11 +71,12 @@ io.github.guranxpsandbox.filemetrics.internal ← non-public API
 - `InMemoryMetricsLogger` — done (inspectable, for tests)
 - `FileMetricsLogger` — done (writes one line per metric group; no
   rotation/cleanup/permissions yet)
-- `Metrics` (facade/entry point) — in progress: `start()`/`stop()`
+- `Metrics` (facade/entry point) — in progress: `start(appName)` and
+  `builder().appName(...).logDir(...).interval(Duration).start()`
   resolve a `MetricsLogger` via ServiceLoader (`metrics.implementation`)
   and run a daemon thread collecting all default metrics (heap,
-  threads, metaspace, GC) every 60 minutes. Opt-in metrics, config
-  API, and cleanup are not started yet.
+  threads, metaspace, GC) on the configured interval (default 60 min).
+  Opt-in metrics, `keepDays`, and cleanup are not started yet.
 
 ## Workflow
 
