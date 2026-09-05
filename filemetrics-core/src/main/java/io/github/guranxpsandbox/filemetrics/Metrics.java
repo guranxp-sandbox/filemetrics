@@ -1,11 +1,11 @@
 package io.github.guranxpsandbox.filemetrics;
 
-import io.github.guranxpsandbox.filemetrics.internal.BuilderProperties;
-import io.github.guranxpsandbox.filemetrics.internal.CleanupDaemon;
-import io.github.guranxpsandbox.filemetrics.internal.MetricsCollectionDaemon;
-import io.github.guranxpsandbox.filemetrics.internal.MetricsLoggerResolver;
-import io.github.guranxpsandbox.filemetrics.internal.MetricsOptions;
-import io.github.guranxpsandbox.filemetrics.internal.ResolvedLogger;
+import io.github.guranxpsandbox.filemetrics.internal.config.BuilderProperties;
+import io.github.guranxpsandbox.filemetrics.internal.config.MetricsOptions;
+import io.github.guranxpsandbox.filemetrics.internal.daemon.CleanupDaemon;
+import io.github.guranxpsandbox.filemetrics.internal.daemon.MetricsCollectionDaemon;
+import io.github.guranxpsandbox.filemetrics.internal.provider.MetricsLoggerResolver;
+import io.github.guranxpsandbox.filemetrics.internal.provider.ResolvedLogger;
 
 import java.io.File;
 import java.time.Duration;

@@ -1,3 +1,0 @@
-io.github.guranxpsandbox.filemetrics.internal.FileMetricsLoggerProvider
-io.github.guranxpsandbox.filemetrics.internal.InMemoryMetricsLoggerProvider
-io.github.guranxpsandbox.filemetrics.internal.NoOpMetricsLoggerProvider

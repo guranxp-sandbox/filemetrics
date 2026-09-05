@@ -29,6 +29,13 @@ daemon threads that logger's provider declared it needs, and
 remembers them so `Metrics.stop()` (or the JVM shutdown hook) can
 shut them down again.
 
+The internal package is grouped by concept, not left flat:
+`internal.collect` (metric collectors), `internal.provider`
+(logger SPI + resolution), `internal.daemon` (the two daemon
+threads), `internal.file` (file format/permissions/cleanup),
+`internal.config` (options/property resolution). None of it is
+public API regardless of sub-package.
+
 ## Storage: the `MetricsLogger` abstraction
 
 `MetricsLogger` (public API) is the single contract every storage
@@ -59,7 +66,8 @@ Three implementations ship in `filemetrics-core`:
    bundled with `DaemonRequirements(false, false)`.
 3. Otherwise, it iterates `MetricsLoggerProvider` implementations
    discovered via `ServiceLoader` (registered in
-   `META-INF/services/...internal.MetricsLoggerProvider`), and picks
+   `META-INF/services/...internal.provider.MetricsLoggerProvider`),
+   and picks
    the one whose `implementationKey()` matches (`file`, `inmemory`).
 4. That provider's `create(appName, logDir)` builds the real logger,
    and its `requirements()` says which daemons it needs — bundled
@@ -254,7 +262,7 @@ property.
 `Metrics.start("app-name")` takes no configuration parameters beyond
 the app name, so `Metrics.builder()` isn't the only way to configure
 it — every other `Builder` field falls back to a system property if
-never set explicitly, resolved by `internal.BuilderProperties`
+never set explicitly, resolved by `internal.config.BuilderProperties`
 (explicit builder value → property → documented default, in that
 order):
 

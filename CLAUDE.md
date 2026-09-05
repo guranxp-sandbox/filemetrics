@@ -23,7 +23,8 @@ License:      Apache 2.0
 
 Public classes and methods in `filemetrics-core` are stable from v1.0.
 No breaking changes are introduced without a new major version.
-Internal classes (package `*.internal`) are not considered public API.
+Internal classes (the `internal` package and every sub-package under
+it) are not considered public API.
 
 ## Module structure
 
@@ -64,9 +65,17 @@ Integration tests are named `*IT.java` (run by Failsafe, only in the
 ## Packages
 
 ```
-io.github.guranxpsandbox.filemetrics   ← public API
-io.github.guranxpsandbox.filemetrics.internal ← non-public API
+io.github.guranxpsandbox.filemetrics            ← public API
+io.github.guranxpsandbox.filemetrics.internal.collect  ← MetricsCollector + implementations
+io.github.guranxpsandbox.filemetrics.internal.provider ← MetricsLoggerProvider SPI + resolver
+io.github.guranxpsandbox.filemetrics.internal.daemon   ← IntervalDaemon + implementations
+io.github.guranxpsandbox.filemetrics.internal.file     ← file format/permissions/cleanup
+io.github.guranxpsandbox.filemetrics.internal.config   ← MetricsOptions, BuilderProperties
 ```
+
+None of the `internal.*` sub-packages are public API — grouped by
+concept purely for navigability as the module grew past ~24 flat
+files. See ARCHITECTURE.md for how they relate.
 
 ## Current status
 
@@ -76,25 +85,27 @@ io.github.guranxpsandbox.filemetrics.internal ← non-public API
 - `FileMetricsLogger` — done (writes one line per metric group; daily
   rotation is implicit in the filename, cleanup is handled by
   `Metrics`' `CleanupDaemon`, files are restricted to owner
-  read/write via `internal.FilePermissions`, approximating POSIX 600
-  through `java.io.File` — not an exact guarantee on every platform;
-  `log()` is `synchronized` so concurrent callers — the daemon plus
-  any thread calling `Metrics.log()` — never interleave writes)
+  read/write via `internal.file.FilePermissions`, approximating POSIX
+  600 through `java.io.File` — not an exact guarantee on every
+  platform; `log()` is `synchronized` so concurrent callers — the
+  daemon plus any thread calling `Metrics.log()` — never interleave
+  writes)
 - `Metrics` (facade/entry point) — done: `start(appName)` and
   `builder().appName(...).logDir(...).interval(Duration)
   .keepDays(...).withDirectMemory()...start()` resolve a
   `MetricsLogger` via ServiceLoader (`metrics.implementation`), then
   start only the daemon threads that implementation's provider
-  declares it needs (`internal.MetricsLoggerProvider.requirements()`
-  → `internal.DaemonRequirements`) — `NoOpMetricsLogger` needs
+  declares it needs
+  (`internal.provider.MetricsLoggerProvider.requirements()` →
+  `internal.provider.DaemonRequirements`) — `NoOpMetricsLogger` needs
   neither, `InMemoryMetricsLogger` needs only collection,
   `FileMetricsLogger` needs both, so an unconfigured app runs no
   background threads at all. Any builder field left unset falls back
   to its matching `metrics.*` system property (`metrics.log.dir`,
   `metrics.interval` in minutes, `metrics.keep.days`,
   `metrics.opt.direct`/`classloading`/`cpu`/`codecache`), then to the
-  documented default — see `internal.BuilderProperties`. `Metrics
-  .stop()` shuts down whichever daemons are running, joining each
+  documented default — see `internal.config.BuilderProperties`.
+  `Metrics.stop()` shuts down whichever daemons are running, joining each
   (bounded, 5s) so no write is left in flight before it returns, and
   a JVM shutdown hook calls it automatically so an app that never
   calls `stop()` explicitly still shuts down cleanly.

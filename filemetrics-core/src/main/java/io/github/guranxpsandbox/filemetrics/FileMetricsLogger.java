@@ -1,7 +1,7 @@
 package io.github.guranxpsandbox.filemetrics;
 
-import io.github.guranxpsandbox.filemetrics.internal.FilePermissions;
-import io.github.guranxpsandbox.filemetrics.internal.MetricLineFormatter;
+import io.github.guranxpsandbox.filemetrics.internal.file.FilePermissions;
+import io.github.guranxpsandbox.filemetrics.internal.file.MetricLineFormatter;
 
 import java.io.File;
 import java.io.FileWriter;
