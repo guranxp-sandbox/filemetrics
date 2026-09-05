@@ -55,6 +55,15 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.13.0</version>
+                <configuration>
+                    <!-- Suppress the "source/target value 8 is obsolete"
+                         notice only, since Java 8 is a deliberate,
+                         documented minimum (see CLAUDE.md), not an
+                         oversight. -->
+                    <compilerArgs>
+                        <arg>-Xlint:-options</arg>
+                    </compilerArgs>
+                </configuration>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
