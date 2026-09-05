@@ -8,12 +8,13 @@ import java.util.ServiceConfigurationError;
 import java.util.ServiceLoader;
 
 /**
- * Resolves the active {@link MetricsLogger} from the
- * {@code metrics.implementation} system property, matching it against
- * {@link MetricsLoggerProvider} implementations discovered via
- * {@link ServiceLoader}. Never throws — falls back to
- * {@link NoOpMetricsLogger} whenever resolution fails, so the host app
- * is never affected by misconfiguration.
+ * Resolves the active {@link MetricsLogger} — bundled with its
+ * daemon requirements — from the {@code metrics.implementation}
+ * system property, matching it against {@link MetricsLoggerProvider}
+ * implementations discovered via {@link ServiceLoader}. Never throws
+ * — falls back to {@link NoOpMetricsLogger} (needing no daemons)
+ * whenever resolution fails, so the host app is never affected by
+ * misconfiguration.
  */
 public final class MetricsLoggerResolver {
 
@@ -23,30 +24,35 @@ public final class MetricsLoggerResolver {
     private MetricsLoggerResolver() {
     }
 
-    public static MetricsLogger resolve(final String appName, final File logDir) {
+    public static ResolvedLogger resolve(final String appName, final File logDir) {
         return resolve(appName, logDir, System.getProperty(PROPERTY, DEFAULT_KEY));
     }
 
-    static MetricsLogger resolve(final String appName, final File logDir,
+    static ResolvedLogger resolve(final String appName, final File logDir,
             final String implementationKey) {
         final String key = implementationKey.trim();
         if (DEFAULT_KEY.equalsIgnoreCase(key)) {
-            return new NoOpMetricsLogger();
+            return noOp();
         }
         try {
             for (final MetricsLoggerProvider provider
                     : ServiceLoader.load(MetricsLoggerProvider.class)) {
                 if (provider.implementationKey().equalsIgnoreCase(key)) {
-                    return provider.create(appName, logDir);
+                    return new ResolvedLogger(provider.create(appName, logDir),
+                            provider.requirements());
                 }
             }
         } catch (final RuntimeException | ServiceConfigurationError e) {
             System.err.println("[filemetrics] failed to resolve metrics "
                     + "implementation '" + key + "': " + e.getMessage());
-            return new NoOpMetricsLogger();
+            return noOp();
         }
         System.err.println("[filemetrics] unknown metrics.implementation '"
                 + key + "', falling back to noop");
-        return new NoOpMetricsLogger();
+        return noOp();
+    }
+
+    private static ResolvedLogger noOp() {
+        return new ResolvedLogger(new NoOpMetricsLogger(), new DaemonRequirements(false, false));
     }
 }

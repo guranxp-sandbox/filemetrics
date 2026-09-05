@@ -16,4 +16,9 @@ public final class FileMetricsLoggerProvider implements MetricsLoggerProvider {
     public MetricsLogger create(final String appName, final File logDir) {
         return new FileMetricsLogger(appName, logDir);
     }
+
+    @Override
+    public DaemonRequirements requirements() {
+        return new DaemonRequirements(true, true);
+    }
 }

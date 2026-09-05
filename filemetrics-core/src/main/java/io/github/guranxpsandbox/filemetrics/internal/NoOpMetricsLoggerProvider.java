@@ -16,4 +16,9 @@ public final class NoOpMetricsLoggerProvider implements MetricsLoggerProvider {
     public MetricsLogger create(final String appName, final File logDir) {
         return new NoOpMetricsLogger();
     }
+
+    @Override
+    public DaemonRequirements requirements() {
+        return new DaemonRequirements(false, false);
+    }
 }

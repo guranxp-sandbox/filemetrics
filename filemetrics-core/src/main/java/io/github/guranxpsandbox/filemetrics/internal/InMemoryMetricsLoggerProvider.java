@@ -16,4 +16,9 @@ public final class InMemoryMetricsLoggerProvider implements MetricsLoggerProvide
     public MetricsLogger create(final String appName, final File logDir) {
         return new InMemoryMetricsLogger();
     }
+
+    @Override
+    public DaemonRequirements requirements() {
+        return new DaemonRequirements(true, false);
+    }
 }

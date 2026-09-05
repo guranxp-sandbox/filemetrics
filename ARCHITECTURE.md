@@ -12,20 +12,22 @@ every small addition.
 Metrics.start("app")            (or Metrics.builder()...start())
         │
         ▼
-MetricsLoggerResolver.resolve() ──▶ picks a MetricsLogger via
+MetricsLoggerResolver.resolve() ──▶ picks a MetricsLogger + its
+        │                           DaemonRequirements via
         │                           ServiceLoader (see below)
         ▼
    MetricsLogger                 (NoOp / InMemory / File)
         ▲                ▲
         │                │
 MetricsCollectionDaemon   CleanupDaemon
-(logs metric groups        (deletes old log files
- on a fixed interval)        on the same interval)
+(only if requirements     (only if requirements
+ .collection())            .cleanup())
 ```
 
-`Metrics` is a thin facade: it resolves a logger, starts two daemon
-threads, and remembers both so `Metrics.stop()` (or the JVM shutdown
-hook) can shut them down again.
+`Metrics` is a thin facade: it resolves a logger, starts whichever
+daemon threads that logger's provider declared it needs, and
+remembers them so `Metrics.stop()` (or the JVM shutdown hook) can
+shut them down again.
 
 ## Storage: the `MetricsLogger` abstraction
 
@@ -53,14 +55,18 @@ Three implementations ship in `filemetrics-core`:
 
 1. `MetricsLoggerResolver.resolve(appName, logDir)` reads the
    `metrics.implementation` system property (default `noop`).
-2. If it's `noop`, done — no lookup needed.
+2. If it's `noop`, done — no lookup needed; returns a `NoOpMetricsLogger`
+   bundled with `DaemonRequirements(false, false)`.
 3. Otherwise, it iterates `MetricsLoggerProvider` implementations
    discovered via `ServiceLoader` (registered in
    `META-INF/services/...internal.MetricsLoggerProvider`), and picks
    the one whose `implementationKey()` matches (`file`, `inmemory`).
-4. That provider's `create(appName, logDir)` builds the real logger.
+4. That provider's `create(appName, logDir)` builds the real logger,
+   and its `requirements()` says which daemons it needs — bundled
+   together as a `ResolvedLogger`.
 5. Any failure at any step (unknown key, `ServiceConfigurationError`,
-   etc.) falls back to `NoOpMetricsLogger` — never throws.
+   etc.) falls back to `NoOpMetricsLogger` (needing no daemons) —
+   never throws.
 
 **Why the indirection instead of `ServiceLoader.load(MetricsLogger
 .class)` directly?** `ServiceLoader` requires a public no-arg
@@ -69,9 +75,14 @@ constructor to instantiate a provider. `FileMetricsLogger` needs
 called — so `ServiceLoader` instead discovers tiny `MetricsLoggerProvider`
 factories (each *does* have a no-arg constructor) that build the real
 logger with the right arguments on demand. This also means a future
-module (e.g. `filemetrics-prometheus`) can add its own logger without
-`filemetrics-core` ever depending on it — it just ships its own
-provider + `META-INF/services` entry.
+module (e.g. `filemetrics-prometheus`) can add its own logger —
+*and declare its own daemon needs* — without `filemetrics-core` ever
+depending on it or needing to special-case it: it just ships its own
+provider + `META-INF/services` entry. (An earlier version of this
+had `Metrics` itself decide which daemons to start via `instanceof`
+checks against concrete logger types — that would have meant
+modifying core every time a new module needed different background
+behavior, quietly defeating the whole point of the provider SPI.)
 
 ## Collecting a metric: built-in vs. custom
 
@@ -188,12 +199,17 @@ daemon threads, so they never keep the JVM alive on their own.
   list and logs every group each one returns.
 - `CleanupDaemon.tick()` — runs `LogFileCleaner.clean(...)` once.
 
-Both currently run on the *same* interval (`Metrics.builder().interval(...)`)
+Neither daemon is started unless the resolved logger's
+`DaemonRequirements` says it's needed (see above) — a `NoOpMetricsLogger`
+runs no background threads at all, `InMemoryMetricsLogger` only runs
+collection, only `FileMetricsLogger` runs both. When both do run,
+they run on the *same* interval (`Metrics.builder().interval(...)`)
 — there's no separate cleanup frequency, since none is documented and
 reusing one interval keeps the configuration surface smaller.
 
-`Metrics.stop()` shuts both daemons down and closes the active
-logger. Critically, it also **joins** each daemon (bounded to 5s)
+`Metrics.stop()` shuts down whichever daemons are running and closes
+the active logger. Critically, it also **joins** each running daemon
+(bounded to 5s)
 before returning — `shutdown()` alone only requests termination, it
 doesn't wait for it. Without the join, `stop()` could return while a
 daemon was still mid-`tick()`, actively writing a file. This was a
@@ -225,10 +241,12 @@ configuration:
 | retention (`keepDays`)   | 7 days                              |
 | opt-in metrics           | all off (direct memory, classloading, CPU, code cache) |
 
-So even calling `Metrics.start("app")` with `metrics.implementation`
-unset collects nothing observable — the daemons run, but log through
-a `NoOpMetricsLogger`. This is deliberate: the library never writes
-anything to disk unless a host app explicitly opts in via that system
+So calling `Metrics.start("app")` with `metrics.implementation` unset
+starts no background threads at all — `NoOpMetricsLogger`'s
+`DaemonRequirements` are `(false, false)`, so there's nothing for a
+collection or cleanup daemon to do. This is deliberate and total: the
+library doesn't just avoid writing to disk by default, it avoids
+running at all, unless a host app explicitly opts in via that system
 property.
 
 ### Configuring an app that only calls `Metrics.start(appName)`

@@ -15,4 +15,12 @@ public interface MetricsLoggerProvider {
     String implementationKey();
 
     MetricsLogger create(String appName, File logDir);
+
+    /**
+     * Which background daemons this provider's logger needs running
+     * for it to function as intended — e.g. a file-backed logger
+     * needs both collection and cleanup, an in-memory one only needs
+     * collection, a no-op one needs neither.
+     */
+    DaemonRequirements requirements();
 }

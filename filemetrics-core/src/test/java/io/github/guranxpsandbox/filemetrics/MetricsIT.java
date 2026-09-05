@@ -15,6 +15,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -59,6 +60,9 @@ class MetricsIT {
 
     @Test
     void shouldStartCollectionDaemonAsDaemonThreadWhenStarting() {
+        // given
+        System.setProperty("metrics.implementation", "inmemory");
+
         // when
         Metrics.start("order-service");
 
@@ -71,6 +75,7 @@ class MetricsIT {
     @Test
     void shouldStopCollectionDaemonWhenStopping() throws InterruptedException {
         // given
+        System.setProperty("metrics.implementation", "inmemory");
         Metrics.start("order-service");
         final Thread daemon = Metrics.collectionDaemon;
 
@@ -83,9 +88,22 @@ class MetricsIT {
     }
 
     @Test
-    void shouldStartCleanupDaemonAsDaemonThreadWhenStarting() {
+    void shouldNotStartAnyDaemonWhenLoggerIsNoOp() {
         // when
         Metrics.start("order-service");
+
+        // then
+        assertNull(Metrics.collectionDaemon);
+        assertNull(Metrics.cleanupDaemon);
+    }
+
+    @Test
+    void shouldStartCleanupDaemonAsDaemonThreadWhenStarting(@TempDir final File logDir) {
+        // given
+        System.setProperty("metrics.implementation", "file");
+
+        // when
+        Metrics.builder().appName("order-service").logDir(logDir.getAbsolutePath()).start();
 
         // then
         assertNotNull(Metrics.cleanupDaemon);
@@ -94,9 +112,11 @@ class MetricsIT {
     }
 
     @Test
-    void shouldStopCleanupDaemonWhenStopping() throws InterruptedException {
+    void shouldStopCleanupDaemonWhenStopping(@TempDir final File logDir)
+            throws InterruptedException {
         // given
-        Metrics.start("order-service");
+        System.setProperty("metrics.implementation", "file");
+        Metrics.builder().appName("order-service").logDir(logDir.getAbsolutePath()).start();
         final Thread daemon = Metrics.cleanupDaemon;
 
         // when
@@ -108,10 +128,10 @@ class MetricsIT {
     }
 
     @Test
-    void shouldHaveTerminatedBothDaemonsBeforeStopReturns() {
+    void shouldHaveTerminatedBothDaemonsBeforeStopReturns(@TempDir final File logDir) {
         // given
-        System.setProperty("metrics.implementation", "inmemory");
-        Metrics.start("order-service");
+        System.setProperty("metrics.implementation", "file");
+        Metrics.builder().appName("order-service").logDir(logDir.getAbsolutePath()).start();
         final Thread collection = Metrics.collectionDaemon;
         final Thread cleanup = Metrics.cleanupDaemon;
 

@@ -5,6 +5,7 @@ import io.github.guranxpsandbox.filemetrics.internal.CleanupDaemon;
 import io.github.guranxpsandbox.filemetrics.internal.MetricsCollectionDaemon;
 import io.github.guranxpsandbox.filemetrics.internal.MetricsLoggerResolver;
 import io.github.guranxpsandbox.filemetrics.internal.MetricsOptions;
+import io.github.guranxpsandbox.filemetrics.internal.ResolvedLogger;
 
 import java.io.File;
 import java.time.Duration;
@@ -13,14 +14,17 @@ import java.util.Map;
 /**
  * Entry point for filemetrics. {@code Metrics.start("app-name")} resolves
  * and activates a {@link MetricsLogger} implementation based on the
- * {@code metrics.implementation} system property, then starts a daemon
- * thread collecting heap metrics and a daemon thread cleaning up old log
- * files, both on a fixed interval. {@code Metrics.stop()} shuts both
- * threads down — waiting (bounded) for each to actually terminate
- * before returning, so no write is left in flight — and releases the
- * logger. Safe to call repeatedly; never throws to the caller. Use
- * {@link #builder()} to configure the log directory, interval,
- * retention, or opt-in metrics. A JVM shutdown hook calls
+ * {@code metrics.implementation} system property, then starts whichever
+ * daemon threads that implementation actually needs — a collection
+ * daemon logging metrics on a fixed interval, and (only for a
+ * file-backed logger) a cleanup daemon deleting old log files. The
+ * default {@link NoOpMetricsLogger} needs neither, so an unconfigured
+ * app runs no background threads at all. {@code Metrics.stop()} shuts
+ * down whichever daemons are running — waiting (bounded) for each to
+ * actually terminate before returning, so no write is left in flight
+ * — and releases the logger. Safe to call repeatedly; never throws to
+ * the caller. Use {@link #builder()} to configure the log directory,
+ * interval, retention, or opt-in metrics. A JVM shutdown hook calls
  * {@link #stop()} automatically, so an app that never calls it
  * explicitly still shuts down cleanly.
  */
@@ -84,11 +88,16 @@ public final class Metrics {
 
     private static synchronized void apply(final String appName, final File logDir,
             final Duration interval, final int keepDays, final MetricsOptions options) {
-        activeLogger = MetricsLoggerResolver.resolve(appName, logDir);
-        collectionDaemon = new MetricsCollectionDaemon(activeLogger, interval.toMillis(), options);
-        collectionDaemon.start();
-        cleanupDaemon = new CleanupDaemon(logDir, appName, keepDays, interval.toMillis());
-        cleanupDaemon.start();
+        final ResolvedLogger resolved = MetricsLoggerResolver.resolve(appName, logDir);
+        activeLogger = resolved.logger();
+        if (resolved.requirements().collection()) {
+            collectionDaemon = new MetricsCollectionDaemon(activeLogger, interval.toMillis(), options);
+            collectionDaemon.start();
+        }
+        if (resolved.requirements().cleanup()) {
+            cleanupDaemon = new CleanupDaemon(logDir, appName, keepDays, interval.toMillis());
+            cleanupDaemon.start();
+        }
     }
 
     /**
