@@ -86,11 +86,17 @@ io.github.guranxpsandbox.filemetrics.internal ← non-public API
   `MetricsLogger` via ServiceLoader (`metrics.implementation`), then
   run two daemon threads on the configured interval — one collecting
   all default and opt-in metrics, one deleting log files older than
-  `keepDays` (default 7). `Metrics.stop()` shuts both down, and a JVM
-  shutdown hook calls it automatically so an app that never calls
-  `stop()` explicitly still shuts down cleanly. `Metrics.log(type,
-  values)` lets a host app log its own custom metric group through
-  the same active logger — a no-op before `start()`.
+  `keepDays` (default 7). Any builder field left unset falls back to
+  its matching `metrics.*` system property (`metrics.log.dir`,
+  `metrics.interval` in minutes, `metrics.keep.days`,
+  `metrics.opt.direct`/`classloading`/`cpu`/`codecache`), then to the
+  documented default — see `internal.BuilderProperties`. `Metrics
+  .stop()` shuts both daemons down, joining each (bounded, 5s) so no
+  write is left in flight before it returns, and a JVM shutdown hook
+  calls it automatically so an app that never calls `stop()`
+  explicitly still shuts down cleanly. `Metrics.log(type, values)`
+  lets a host app log its own custom metric group through the same
+  active logger — a no-op before `start()`.
 
 ## Workflow
 

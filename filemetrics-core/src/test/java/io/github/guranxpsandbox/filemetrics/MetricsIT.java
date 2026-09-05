@@ -26,6 +26,13 @@ class MetricsIT {
     void stopAndClearProperty() {
         Metrics.stop();
         System.clearProperty("metrics.implementation");
+        System.clearProperty("metrics.log.dir");
+        System.clearProperty("metrics.interval");
+        System.clearProperty("metrics.keep.days");
+        System.clearProperty("metrics.opt.direct");
+        System.clearProperty("metrics.opt.classloading");
+        System.clearProperty("metrics.opt.cpu");
+        System.clearProperty("metrics.opt.codecache");
     }
 
     @Test
@@ -98,6 +105,22 @@ class MetricsIT {
 
         // then
         assertFalse(daemon.isAlive());
+    }
+
+    @Test
+    void shouldHaveTerminatedBothDaemonsBeforeStopReturns() {
+        // given
+        System.setProperty("metrics.implementation", "inmemory");
+        Metrics.start("order-service");
+        final Thread collection = Metrics.collectionDaemon;
+        final Thread cleanup = Metrics.cleanupDaemon;
+
+        // when
+        Metrics.stop();
+
+        // then — no join() here: stop() itself must already guarantee this
+        assertFalse(collection.isAlive());
+        assertFalse(cleanup.isAlive());
     }
 
     @Test
@@ -241,6 +264,69 @@ class MetricsIT {
                 .withClassLoading()
                 .withCpu()
                 .withCodeCache()
+                .start();
+
+        // then
+        waitUntil(() -> entriesOfType("codecache") >= 2);
+        assertTrue(entriesOfType("direct") >= 2);
+        assertTrue(entriesOfType("classloading") >= 2);
+        assertTrue(entriesOfType("cpu") >= 2);
+        assertTrue(entriesOfType("codecache") >= 2);
+    }
+
+    @Test
+    void shouldUseLogDirFromSystemPropertyWhenNotSetOnBuilder(@TempDir final File logDir)
+            throws InterruptedException {
+        // given
+        System.setProperty("metrics.implementation", "file");
+        System.setProperty("metrics.log.dir", logDir.getAbsolutePath());
+        final File expectedFile = new File(logDir, "order-service-" + LocalDate.now() + ".log");
+
+        // when
+        Metrics.builder()
+                .appName("order-service")
+                .interval(Duration.ofMillis(20L))
+                .start();
+
+        // then
+        waitUntil(expectedFile::exists);
+    }
+
+    @Test
+    void shouldUseKeepDaysFromSystemPropertyWhenNotSetOnBuilder(@TempDir final File logDir)
+            throws IOException, InterruptedException {
+        // given
+        System.setProperty("metrics.implementation", "file");
+        System.setProperty("metrics.keep.days", "7");
+        final File oldFile =
+                new File(logDir, "order-service-" + LocalDate.now().minusDays(10) + ".log");
+        assertTrue(oldFile.createNewFile());
+
+        // when
+        Metrics.builder()
+                .appName("order-service")
+                .logDir(logDir.getAbsolutePath())
+                .interval(Duration.ofMillis(20L))
+                .start();
+
+        // then
+        waitUntil(() -> !oldFile.exists());
+    }
+
+    @Test
+    void shouldEnableOptInMetricsFromSystemPropertiesWhenNotSetOnBuilder()
+            throws InterruptedException {
+        // given
+        System.setProperty("metrics.implementation", "inmemory");
+        System.setProperty("metrics.opt.direct", "true");
+        System.setProperty("metrics.opt.classloading", "true");
+        System.setProperty("metrics.opt.cpu", "true");
+        System.setProperty("metrics.opt.codecache", "true");
+
+        // when
+        Metrics.builder()
+                .appName("order-service")
+                .interval(Duration.ofMillis(20L))
                 .start();
 
         // then

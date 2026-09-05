@@ -51,6 +51,20 @@ Select the logger implementation via a system property (defaults to
 Default metrics collected: heap, threads, metaspace, GC. Opt-in:
 direct memory, class loading, CPU, code cache.
 
+Every other builder field falls back to a system property when not
+set explicitly — useful for tuning an app that only calls the
+one-line `Metrics.start("app-name")`, with no code change:
+
+```bash
+-Dmetrics.log.dir=/var/log/metrics
+-Dmetrics.interval=15          # minutes
+-Dmetrics.keep.days=14
+-Dmetrics.opt.direct=true
+-Dmetrics.opt.classloading=true
+-Dmetrics.opt.cpu=true
+-Dmetrics.opt.codecache=true
+```
+
 ### Custom metrics
 
 Log your own metric groups through the same file and lifecycle

@@ -193,10 +193,21 @@ Both currently run on the *same* interval (`Metrics.builder().interval(...)`)
 reusing one interval keeps the configuration surface smaller.
 
 `Metrics.stop()` shuts both daemons down and closes the active
-logger. A JVM shutdown hook (registered once, in a `static`
-initializer — see `Metrics.shutdownHook`) calls `stop()` automatically,
-so an application that never calls it explicitly still shuts down
-cleanly. The hook is registered once and never removed; `stop()` is
+logger. Critically, it also **joins** each daemon (bounded to 5s)
+before returning — `shutdown()` alone only requests termination, it
+doesn't wait for it. Without the join, `stop()` could return while a
+daemon was still mid-`tick()`, actively writing a file. This was a
+real, reproducible bug, not a theoretical one: tests using a real
+`@TempDir` with a short interval intermittently failed because
+JUnit's directory cleanup raced against a daemon still writing into
+it after the test's own `stop()` call had already "returned."
+Joining closed that window — `stop()` now guarantees no write is left
+in flight by the time it returns.
+
+A JVM shutdown hook (registered once, in a `static` initializer —
+see `Metrics.shutdownHook`) calls `stop()` automatically, so an
+application that never calls it explicitly still shuts down cleanly.
+The hook is registered once and never removed; `stop()` is
 idempotent, so the hook firing after an already-explicit `stop()` is
 harmless.
 
@@ -219,3 +230,29 @@ unset collects nothing observable — the daemons run, but log through
 a `NoOpMetricsLogger`. This is deliberate: the library never writes
 anything to disk unless a host app explicitly opts in via that system
 property.
+
+### Configuring an app that only calls `Metrics.start(appName)`
+
+`Metrics.start("app-name")` takes no configuration parameters beyond
+the app name, so `Metrics.builder()` isn't the only way to configure
+it — every other `Builder` field falls back to a system property if
+never set explicitly, resolved by `internal.BuilderProperties`
+(explicit builder value → property → documented default, in that
+order):
+
+| Field                | System property           | Format                |
+|----------------------|----------------------------|-----------------------|
+| `logDir`             | `metrics.log.dir`          | a path                |
+| `interval`           | `metrics.interval`         | whole minutes, e.g. `15` |
+| `keepDays`           | `metrics.keep.days`        | an integer            |
+| `withDirectMemory()` | `metrics.opt.direct`       | `true`/`false`        |
+| `withClassLoading()` | `metrics.opt.classloading` | `true`/`false`        |
+| `withCpu()`          | `metrics.opt.cpu`          | `true`/`false`        |
+| `withCodeCache()`    | `metrics.opt.codecache`    | `true`/`false`        |
+
+This is what lets an ops team tune a deployed app — interval,
+retention, opt-in metrics — via a JVM flag, with no code change and
+no redeploy, even when the app itself only ever calls the one-line
+`Metrics.start("app-name")`. An invalid property value (e.g.
+`metrics.interval=abc`) is warned to stderr and the default wins —
+never throws.

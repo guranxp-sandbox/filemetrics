@@ -1,5 +1,6 @@
 package io.github.guranxpsandbox.filemetrics;
 
+import io.github.guranxpsandbox.filemetrics.internal.BuilderProperties;
 import io.github.guranxpsandbox.filemetrics.internal.CleanupDaemon;
 import io.github.guranxpsandbox.filemetrics.internal.MetricsCollectionDaemon;
 import io.github.guranxpsandbox.filemetrics.internal.MetricsLoggerResolver;
@@ -15,17 +16,17 @@ import java.util.Map;
  * {@code metrics.implementation} system property, then starts a daemon
  * thread collecting heap metrics and a daemon thread cleaning up old log
  * files, both on a fixed interval. {@code Metrics.stop()} shuts both
- * threads down and releases the logger. Safe to call repeatedly; never
- * throws to the caller. Use {@link #builder()} to configure the log
- * directory, interval, retention, or opt-in metrics.
- * A JVM shutdown hook calls {@link #stop()} automatically, so an app
- * that never calls it explicitly still shuts down cleanly.
+ * threads down — waiting (bounded) for each to actually terminate
+ * before returning, so no write is left in flight — and releases the
+ * logger. Safe to call repeatedly; never throws to the caller. Use
+ * {@link #builder()} to configure the log directory, interval,
+ * retention, or opt-in metrics. A JVM shutdown hook calls
+ * {@link #stop()} automatically, so an app that never calls it
+ * explicitly still shuts down cleanly.
  */
 public final class Metrics {
 
-    private static final File DEFAULT_LOG_DIR = new File("./metrics");
-    private static final Duration DEFAULT_INTERVAL = Duration.ofMinutes(60L);
-    private static final int DEFAULT_KEEP_DAYS = 7;
+    private static final long SHUTDOWN_JOIN_TIMEOUT_MILLIS = 5_000L;
 
     static volatile MetricsLogger activeLogger = new NoOpMetricsLogger();
     static volatile MetricsCollectionDaemon collectionDaemon;
@@ -61,14 +62,24 @@ public final class Metrics {
     public static synchronized void stop() {
         if (collectionDaemon != null) {
             collectionDaemon.shutdown();
+            joinQuietly(collectionDaemon);
             collectionDaemon = null;
         }
         if (cleanupDaemon != null) {
             cleanupDaemon.shutdown();
+            joinQuietly(cleanupDaemon);
             cleanupDaemon = null;
         }
         activeLogger.close();
         activeLogger = new NoOpMetricsLogger();
+    }
+
+    private static void joinQuietly(final Thread thread) {
+        try {
+            thread.join(SHUTDOWN_JOIN_TIMEOUT_MILLIS);
+        } catch (final InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     private static synchronized void apply(final String appName, final File logDir,
@@ -86,13 +97,13 @@ public final class Metrics {
     public static final class Builder {
 
         private String appName;
-        private File logDir = DEFAULT_LOG_DIR;
-        private Duration interval = DEFAULT_INTERVAL;
-        private int keepDays = DEFAULT_KEEP_DAYS;
-        private boolean directMemory;
-        private boolean classLoading;
-        private boolean cpu;
-        private boolean codeCache;
+        private File logDir;
+        private Duration interval;
+        private Integer keepDays;
+        private Boolean directMemory;
+        private Boolean classLoading;
+        private Boolean cpu;
+        private Boolean codeCache;
 
         private Builder() {
         }
@@ -141,9 +152,13 @@ public final class Metrics {
             if (appName == null) {
                 throw new IllegalStateException("appName must be set before calling start()");
             }
-            final MetricsOptions options =
-                    new MetricsOptions(directMemory, classLoading, cpu, codeCache);
-            apply(appName, logDir, interval, keepDays, options);
+            final MetricsOptions options = new MetricsOptions(
+                    BuilderProperties.flag(directMemory, "metrics.opt.direct"),
+                    BuilderProperties.flag(classLoading, "metrics.opt.classloading"),
+                    BuilderProperties.flag(cpu, "metrics.opt.cpu"),
+                    BuilderProperties.flag(codeCache, "metrics.opt.codecache"));
+            apply(appName, BuilderProperties.logDir(logDir), BuilderProperties.interval(interval),
+                    BuilderProperties.keepDays(keepDays), options);
         }
     }
 }
