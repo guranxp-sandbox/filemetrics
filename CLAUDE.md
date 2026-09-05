@@ -73,16 +73,16 @@ io.github.guranxpsandbox.filemetrics.internal ← non-public API
 - `MetricsLogger` interface — done
 - `NoOpMetricsLogger` — done (default)
 - `InMemoryMetricsLogger` — done (inspectable, for tests)
-- `FileMetricsLogger` — done (writes one line per metric group; no
-  rotation/cleanup/permissions yet)
-- `Metrics` (facade/entry point) — in progress: `start(appName)` and
-  `builder().appName(...).logDir(...).interval(Duration).start()`
-  resolve a `MetricsLogger` via ServiceLoader (`metrics.implementation`)
-  and run a daemon thread collecting all default metrics (heap,
-  threads, metaspace, GC) on the configured interval (default 60 min).
-  Opt-in metrics (`withDirectMemory()`, `withClassLoading()`,
-  `withCpu()`, `withCodeCache()`) are done. `keepDays` and cleanup are
-  not started yet.
+- `FileMetricsLogger` — done (writes one line per metric group; daily
+  rotation is implicit in the filename, cleanup is handled by
+  `Metrics`' `CleanupDaemon`; file permissions (600) not started yet)
+- `Metrics` (facade/entry point) — done: `start(appName)` and
+  `builder().appName(...).logDir(...).interval(Duration)
+  .keepDays(...).withDirectMemory()...start()` resolve a
+  `MetricsLogger` via ServiceLoader (`metrics.implementation`), then
+  run two daemon threads on the configured interval — one collecting
+  all default and opt-in metrics, one deleting log files older than
+  `keepDays` (default 7). `Metrics.stop()` shuts both down.
 
 ## Workflow
 

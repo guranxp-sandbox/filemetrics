@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
+import java.io.IOException;
 import java.time.Duration;
 import java.time.LocalDate;
 
@@ -70,6 +71,52 @@ class MetricsIT {
 
         // then
         assertFalse(daemon.isAlive());
+    }
+
+    @Test
+    void shouldStartCleanupDaemonAsDaemonThreadWhenStarting() {
+        // when
+        Metrics.start("order-service");
+
+        // then
+        assertNotNull(Metrics.cleanupDaemon);
+        assertTrue(Metrics.cleanupDaemon.isAlive());
+        assertTrue(Metrics.cleanupDaemon.isDaemon());
+    }
+
+    @Test
+    void shouldStopCleanupDaemonWhenStopping() throws InterruptedException {
+        // given
+        Metrics.start("order-service");
+        final Thread daemon = Metrics.cleanupDaemon;
+
+        // when
+        Metrics.stop();
+        daemon.join(POLL_TIMEOUT_MILLIS);
+
+        // then
+        assertFalse(daemon.isAlive());
+    }
+
+    @Test
+    void shouldUseCustomKeepDaysFromBuilder(@TempDir final File logDir) throws IOException,
+            InterruptedException {
+        // given
+        System.setProperty("metrics.implementation", "file");
+        final File oldFile =
+                new File(logDir, "order-service-" + LocalDate.now().minusDays(10) + ".log");
+        assertTrue(oldFile.createNewFile());
+
+        // when
+        Metrics.builder()
+                .appName("order-service")
+                .logDir(logDir.getAbsolutePath())
+                .interval(Duration.ofMillis(20L))
+                .keepDays(7)
+                .start();
+
+        // then
+        waitUntil(() -> !oldFile.exists());
     }
 
     @Test
