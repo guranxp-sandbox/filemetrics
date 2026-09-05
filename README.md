@@ -77,5 +77,7 @@ Apache 2.0
 
 ## Contributing
 
-See [WORKFLOW.md](WORKFLOW.md) for the development workflow and
-[CLAUDE.md](CLAUDE.md) for project conventions.
+See [WORKFLOW.md](WORKFLOW.md) for the development workflow,
+[CLAUDE.md](CLAUDE.md) for project conventions, and
+[ARCHITECTURE.md](ARCHITECTURE.md) for how metrics collection,
+storage, and threading fit together.
