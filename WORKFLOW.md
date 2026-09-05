@@ -3,7 +3,8 @@
 ## Rules
 
 1. **Never implement without explicit approval.**
-   Always present the plan first and wait for "ok" or "go" before code is written or changes are made.
+   Always present the plan first and wait for "ok" or "go" before code
+   is written or changes are made.
 
 2. **Explore → Plan → Code.**
    Show the plan before code is written for each new, well-scoped piece of work.

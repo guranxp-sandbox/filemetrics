@@ -56,7 +56,8 @@ filemetrics-autoinstrument → pulls in filemetrics-core + micrometer-core
 ## filemetrics-core
 
 ### Purpose
-Collect JVM metrics and custom metrics and write them to file. No external dependencies — only java.lang.management.
+Collect JVM metrics and custom metrics and write them to file. No
+external dependencies — only java.lang.management.
 
 ### Default metrics (always on)
 ```
@@ -193,7 +194,8 @@ Metrics.stop()        → clean up threads in teardown
 ## filemetrics-prometheus
 
 ### Purpose
-Prometheus format via Micrometer. Plugs into Micrometer as its own MeterRegistry.
+Prometheus format via Micrometer. Plugs into Micrometer as its own
+MeterRegistry.
 
 ### Modes
 
@@ -355,7 +357,8 @@ Fallback to noop if the file can't be created
 
 ## Next steps
 
-1. Set up GitHub repo (guranxp-sandbox/filemetrics) with Maven multi-module structure
+1. Set up GitHub repo (guranxp-sandbox/filemetrics) with Maven
+   multi-module structure
 2. Start with filemetrics-core
 3. Implement FileMetricsLogger
 4. Implement InMemoryMetricsLogger and NoOpMetricsLogger
