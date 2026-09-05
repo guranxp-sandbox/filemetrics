@@ -10,7 +10,9 @@
    Show the plan before code is written for each new, well-scoped piece of work.
 
 3. **Small steps. TDD.**
-   Tests are written before implementation.
+   Tests are written before implementation — unit tests always, and
+   integration tests too whenever the change crosses a real boundary
+   (filesystem, threads, ServiceLoader, network, etc).
 
 4. **After every small step:**
    Show diff + test results. Commit only after the user's approval.
