@@ -7,6 +7,7 @@ import io.github.guranxpsandbox.filemetrics.internal.MetricsOptions;
 
 import java.io.File;
 import java.time.Duration;
+import java.util.Map;
 
 /**
  * Entry point for filemetrics. {@code Metrics.start("app-name")} resolves
@@ -45,6 +46,16 @@ public final class Metrics {
 
     public static void start(final String appName) {
         builder().appName(appName).start();
+    }
+
+    /**
+     * Logs a custom metric group through whichever {@link MetricsLogger}
+     * {@link #start} (or {@link Builder#start()}) activated. A no-op
+     * before {@code start()} is called, since the active logger defaults
+     * to {@link NoOpMetricsLogger}.
+     */
+    public static void log(final String type, final Map<String, Object> values) {
+        activeLogger.log(type, values);
     }
 
     public static synchronized void stop() {

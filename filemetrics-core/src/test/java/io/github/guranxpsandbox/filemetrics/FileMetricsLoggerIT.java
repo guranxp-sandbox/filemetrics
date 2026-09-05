@@ -110,6 +110,38 @@ class FileMetricsLoggerIT {
     }
 
     @Test
+    void shouldWriteWellFormedLinesUnderConcurrentLogging(@TempDir final File logDir)
+            throws InterruptedException, IOException {
+        // given
+        final FileMetricsLogger logger = new FileMetricsLogger("order-service", logDir);
+        final int threadCount = 8;
+        final int callsPerThread = 50;
+        final Thread[] threads = new Thread[threadCount];
+        for (int i = 0; i < threadCount; i++) {
+            threads[i] = new Thread(() -> {
+                for (int call = 0; call < callsPerThread; call++) {
+                    logger.log("heap", new LinkedHashMap<>());
+                }
+            });
+        }
+
+        // when
+        for (final Thread thread : threads) {
+            thread.start();
+        }
+        for (final Thread thread : threads) {
+            thread.join();
+        }
+
+        // then
+        final List<String> lines = readLinesOf(logFile(logDir, "order-service"));
+        assertEquals(threadCount * callsPerThread, lines.size());
+        for (final String line : lines) {
+            assertTrue(line.matches(TIMESTAMP_PATTERN + " app=order-service type=heap"));
+        }
+    }
+
+    @Test
     void shouldNotThrowWhenClosing(@TempDir final File logDir) {
         // given
         final FileMetricsLogger logger = new FileMetricsLogger("order-service", logDir);

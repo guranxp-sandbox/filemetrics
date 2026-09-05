@@ -26,12 +26,13 @@ public final class FileMetricsLogger implements MetricsLogger {
     }
 
     @Override
-    public void log(final String type, final Map<String, Object> values) {
+    public synchronized void log(final String type, final Map<String, Object> values) {
         try {
             ensureLogDirExists();
             final File file = currentLogFile();
-            file.createNewFile();
-            FilePermissions.restrictToOwner(file);
+            if (file.createNewFile()) {
+                FilePermissions.restrictToOwner(file);
+            }
             final String line = MetricLineFormatter.format(
                     Instant.now(), appName, type, values);
             try (FileWriter writer = new FileWriter(file, true)) {

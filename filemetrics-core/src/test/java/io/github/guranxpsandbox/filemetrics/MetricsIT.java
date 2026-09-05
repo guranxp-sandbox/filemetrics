@@ -8,6 +8,8 @@ import java.io.File;
 import java.io.IOException;
 import java.time.Duration;
 import java.time.LocalDate;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -142,6 +144,32 @@ class MetricsIT {
 
         // then
         assertFalse(daemon.isAlive());
+    }
+
+    @Test
+    void shouldLogCustomMetricThroughActiveLogger() {
+        // given
+        System.setProperty("metrics.implementation", "inmemory");
+        Metrics.start("order-service");
+        final Map<String, Object> values = new LinkedHashMap<>();
+        values.put("hits", 42);
+        values.put("misses", 3);
+
+        // when
+        Metrics.log("cache", values);
+
+        // then
+        final InMemoryMetricsLogger logger = (InMemoryMetricsLogger) Metrics.activeLogger;
+        final InMemoryMetricsLogger.LoggedMetric entry = logger.entries().stream()
+                .filter(e -> "cache".equals(e.type()))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("no 'cache' entry logged"));
+        assertEquals(values, entry.values());
+    }
+
+    @Test
+    void shouldNotThrowWhenLoggingCustomMetricBeforeStarting() {
+        assertDoesNotThrow(() -> Metrics.log("cache", new LinkedHashMap<>()));
     }
 
     @Test

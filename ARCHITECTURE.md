@@ -104,25 +104,44 @@ it to `MetricsCollectionDaemon`'s collector list (unconditionally for
 a default metric, or behind a new `MetricsOptions` flag for an
 opt-in one).
 
-### Custom metrics — current limitation
+### Custom metrics
 
-`MetricsLogger` is public API, so nothing stops an application from
-writing its own metric groups: construct a logger directly and call
-`log()` on it —
+`Metrics.log(type, values)` logs a custom metric group through
+whichever `MetricsLogger` `Metrics.start()` (or `Builder.start()`)
+already activated — same file, same lifecycle, same `keepDays`
+cleanup as everything else:
 
 ```java
-MetricsLogger logger =
-    new FileMetricsLogger("order-service", new File("./metrics"));
-logger.log("cache", Map.of("hits", 42, "misses", 3));
+Metrics.start("order-service");
+// anywhere in the app:
+Metrics.log("cache", Map.of("hits", 42, "misses", 3));
 ```
 
-This works today, but it's disconnected from whatever `Metrics.start()`
-set up — it's a second, independent logger instance with its own
-lifecycle (nothing closes it, no `keepDays` cleanup runs against it
-unless you also drive that yourself). There is currently no
-`Metrics.log(type, values)` that reuses the facade's own active
-logger and daemons. That's a known gap, not a design decision — worth
-closing in a future change.
+It's a direct passthrough to the active logger, so it's a no-op
+before `start()` is called (the active logger defaults to
+`NoOpMetricsLogger`) — consistent with the rest of the library never
+throwing to the caller.
+
+`Metrics.log()` writes immediately on every call, exactly like the
+built-in collectors — no internal buffering. That means **the
+frequency of your calls is the frequency of file writes.** For
+anything called often (e.g. once per request), aggregate a count/
+total/max yourself and call `Metrics.log()` periodically instead of
+per-event — the same shape the built-in GC metric already uses
+(`count` + `time_ms`, accumulated, not one line per collection).
+
+Because arbitrary application threads can now call `Metrics.log()`
+concurrently with each other and with the internal collection daemon,
+`FileMetricsLogger.log()` is `synchronized` — without it, concurrent
+writes reliably corrupted the file (verified: a test hammering it
+from 8 threads × 50 calls lost roughly half of all 400 expected
+lines before the fix, every single run).
+
+Nothing stops an application from bypassing `Metrics` entirely and
+constructing its own `MetricsLogger` instance directly, but that
+creates a second, independent logger with its own lifecycle (nothing
+closes it, no shared `keepDays` cleanup) — `Metrics.log()` is the
+better default choice.
 
 ## File storage format
 

@@ -77,7 +77,9 @@ io.github.guranxpsandbox.filemetrics.internal ← non-public API
   rotation is implicit in the filename, cleanup is handled by
   `Metrics`' `CleanupDaemon`, files are restricted to owner
   read/write via `internal.FilePermissions`, approximating POSIX 600
-  through `java.io.File` — not an exact guarantee on every platform)
+  through `java.io.File` — not an exact guarantee on every platform;
+  `log()` is `synchronized` so concurrent callers — the daemon plus
+  any thread calling `Metrics.log()` — never interleave writes)
 - `Metrics` (facade/entry point) — done: `start(appName)` and
   `builder().appName(...).logDir(...).interval(Duration)
   .keepDays(...).withDirectMemory()...start()` resolve a
@@ -86,7 +88,9 @@ io.github.guranxpsandbox.filemetrics.internal ← non-public API
   all default and opt-in metrics, one deleting log files older than
   `keepDays` (default 7). `Metrics.stop()` shuts both down, and a JVM
   shutdown hook calls it automatically so an app that never calls
-  `stop()` explicitly still shuts down cleanly.
+  `stop()` explicitly still shuts down cleanly. `Metrics.log(type,
+  values)` lets a host app log its own custom metric group through
+  the same active logger — a no-op before `start()`.
 
 ## Workflow
 
