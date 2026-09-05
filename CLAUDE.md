@@ -51,6 +51,12 @@ filemetrics-autoinstrument    → automatic instrumentation via reflection
    2026-08-27T10:00:00Z app=order-service type=heap used_mb=312 committed_mb=400 max_mb=1024
    ```
 
+## Testing
+
+Unit tests are named `*Test.java` (run by Surefire, `mvn test`).
+Integration tests are named `*IT.java` (run by Failsafe, only in the
+`integration-tests` CI job, never re-running unit tests).
+
 ## Packages
 
 ```
