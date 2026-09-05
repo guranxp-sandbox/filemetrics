@@ -51,6 +51,21 @@ Select the logger implementation via a system property (defaults to
 Default metrics collected: heap, threads, metaspace, GC. Opt-in:
 direct memory, class loading, CPU, code cache.
 
+### Custom metrics
+
+Log your own metric groups through the same file and lifecycle
+`Metrics.start()` set up:
+
+```java
+Metrics.log("cache", Map.of("hits", 42, "misses", 3));
+```
+
+A no-op before `start()` is called. Writes immediately, with no
+internal buffering — for anything logged often (e.g. once per
+request), aggregate a count/total/max yourself and call `log()`
+periodically, rather than once per event. See
+[ARCHITECTURE.md](ARCHITECTURE.md) for details.
+
 ## Modules
 
 ```
