@@ -5,97 +5,90 @@ import io.github.guranxpsandbox.filemetrics.InMemoryMetricsLogger;
 import io.github.guranxpsandbox.filemetrics.MetricsLogger;
 import io.github.guranxpsandbox.filemetrics.NoOpMetricsLogger;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 class MetricsLoggerResolverIT {
 
-    private static final String PROPERTY = "metrics.implementation";
+    @Test
+    void shouldResolveNoOpLoggerWhenKeyIsNoop(@TempDir final File logDir) {
+        // when
+        final MetricsLogger logger =
+                MetricsLoggerResolver.resolve("order-service", logDir, "noop");
 
-    @AfterEach
-    void clearProperty() {
-        System.clearProperty(PROPERTY);
+        // then
+        assertInstanceOf(NoOpMetricsLogger.class, logger);
     }
 
     @Test
-    void shouldResolveNoOpLoggerWhenPropertyNotSet(@TempDir final File logDir) {
-        // given
-        System.clearProperty(PROPERTY);
-
+    void shouldResolveInMemoryLoggerWhenKeyIsInmemory(@TempDir final File logDir) {
         // when
         final MetricsLogger logger =
-                MetricsLoggerResolver.resolve("order-service", logDir);
+                MetricsLoggerResolver.resolve("order-service", logDir, "inmemory");
 
         // then
-        assertTrue(logger instanceof NoOpMetricsLogger);
+        assertInstanceOf(InMemoryMetricsLogger.class, logger);
     }
 
     @Test
-    void shouldResolveNoOpLoggerWhenPropertyIsNoop(@TempDir final File logDir) {
-        // given
-        System.setProperty(PROPERTY, "noop");
-
+    void shouldResolveFileLoggerWhenKeyIsFile(@TempDir final File logDir) {
         // when
         final MetricsLogger logger =
-                MetricsLoggerResolver.resolve("order-service", logDir);
+                MetricsLoggerResolver.resolve("order-service", logDir, "file");
 
         // then
-        assertTrue(logger instanceof NoOpMetricsLogger);
-    }
-
-    @Test
-    void shouldResolveInMemoryLoggerWhenPropertyIsInmemory(@TempDir final File logDir) {
-        // given
-        System.setProperty(PROPERTY, "inmemory");
-
-        // when
-        final MetricsLogger logger =
-                MetricsLoggerResolver.resolve("order-service", logDir);
-
-        // then
-        assertTrue(logger instanceof InMemoryMetricsLogger);
-    }
-
-    @Test
-    void shouldResolveFileLoggerWhenPropertyIsFile(@TempDir final File logDir) {
-        // given
-        System.setProperty(PROPERTY, "file");
-
-        // when
-        final MetricsLogger logger =
-                MetricsLoggerResolver.resolve("order-service", logDir);
-
-        // then
-        assertTrue(logger instanceof FileMetricsLogger);
+        assertInstanceOf(FileMetricsLogger.class, logger);
     }
 
     @Test
     void shouldResolveCaseInsensitively(@TempDir final File logDir) {
-        // given
-        System.setProperty(PROPERTY, "INMEMORY");
-
         // when
         final MetricsLogger logger =
-                MetricsLoggerResolver.resolve("order-service", logDir);
+                MetricsLoggerResolver.resolve("order-service", logDir, "INMEMORY");
 
         // then
-        assertTrue(logger instanceof InMemoryMetricsLogger);
+        assertInstanceOf(InMemoryMetricsLogger.class, logger);
     }
 
     @Test
-    void shouldFallBackToNoOpWhenPropertyIsUnknown(@TempDir final File logDir) {
-        // given
-        System.setProperty(PROPERTY, "does-not-exist");
-
+    void shouldFallBackToNoOpWhenKeyIsUnknown(@TempDir final File logDir) {
         // when
         final MetricsLogger logger =
-                MetricsLoggerResolver.resolve("order-service", logDir);
+                MetricsLoggerResolver.resolve("order-service", logDir, "does-not-exist");
 
         // then
-        assertTrue(logger instanceof NoOpMetricsLogger);
+        assertInstanceOf(NoOpMetricsLogger.class, logger);
+    }
+
+    /**
+     * The only test in this class touching the real system property —
+     * everything else exercises the pure, key-parameterized overload above.
+     */
+    @Nested
+    class SystemPropertyPlumbing {
+
+        private static final String PROPERTY = "metrics.implementation";
+
+        @AfterEach
+        void clearProperty() {
+            System.clearProperty(PROPERTY);
+        }
+
+        @Test
+        void shouldReadImplementationKeyFromSystemProperty(@TempDir final File logDir) {
+            // given
+            System.setProperty(PROPERTY, "inmemory");
+
+            // when
+            final MetricsLogger logger = MetricsLoggerResolver.resolve("order-service", logDir);
+
+            // then
+            assertInstanceOf(InMemoryMetricsLogger.class, logger);
+        }
     }
 }

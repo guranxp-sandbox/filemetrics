@@ -24,7 +24,12 @@ public final class MetricsLoggerResolver {
     }
 
     public static MetricsLogger resolve(final String appName, final File logDir) {
-        final String key = System.getProperty(PROPERTY, DEFAULT_KEY).trim();
+        return resolve(appName, logDir, System.getProperty(PROPERTY, DEFAULT_KEY));
+    }
+
+    static MetricsLogger resolve(final String appName, final File logDir,
+            final String implementationKey) {
+        final String key = implementationKey.trim();
         if (DEFAULT_KEY.equalsIgnoreCase(key)) {
             return new NoOpMetricsLogger();
         }
