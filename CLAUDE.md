@@ -68,7 +68,7 @@ io.github.guranxpsandbox.filemetrics.internal ← non-public API
 
 - `MetricsLogger` interface — done
 - `NoOpMetricsLogger` — done (default)
-- `InMemoryMetricsLogger` — not started
+- `InMemoryMetricsLogger` — done (inspectable, for tests)
 - `FileMetricsLogger` — done (writes one line per metric group; no
   rotation/cleanup/permissions yet)
 - `Metrics` (facade/entry point) — not started
