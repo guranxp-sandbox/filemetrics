@@ -41,6 +41,10 @@ filemetrics-autoinstrument    → automatic instrumentation via reflection
 2. **No external dependencies** in `filemetrics-core` — only
    `java.lang.*`, `java.util.*`, `java.io.*`, `java.lang.management.*`,
    `java.time.*`. File I/O uses `java.io` (not `java.nio.file`).
+   `com.sun.management.OperatingSystemMXBean` is allowed for the CPU
+   opt-in metric only (direct cast with an `instanceof` guard, never a
+   blind cast) — it ships with every mainstream JDK, but isn't part of
+   the Java SE spec, so this is a deliberate, narrow exception.
 3. **Threading** — daemon threads for file writing and cleanup.
    `close()` shuts down both.
 4. **Error handling** — the host app is never affected by metrics
@@ -76,7 +80,9 @@ io.github.guranxpsandbox.filemetrics.internal ← non-public API
   resolve a `MetricsLogger` via ServiceLoader (`metrics.implementation`)
   and run a daemon thread collecting all default metrics (heap,
   threads, metaspace, GC) on the configured interval (default 60 min).
-  Opt-in metrics, `keepDays`, and cleanup are not started yet.
+  Opt-in metrics (`withDirectMemory()`, `withClassLoading()`,
+  `withCpu()`, `withCodeCache()`) are done. `keepDays` and cleanup are
+  not started yet.
 
 ## Workflow
 

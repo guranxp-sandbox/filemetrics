@@ -2,13 +2,13 @@ package io.github.guranxpsandbox.filemetrics.internal;
 
 import io.github.guranxpsandbox.filemetrics.MetricsLogger;
 
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 /**
- * Daemon thread that logs each default metric group on a fixed
- * interval until {@link #shutdown()} is called.
+ * Daemon thread that logs each default and opt-in metric group on a
+ * fixed interval until {@link #shutdown()} is called.
  */
 public final class MetricsCollectionDaemon extends Thread {
 
@@ -17,14 +17,11 @@ public final class MetricsCollectionDaemon extends Thread {
     private final long intervalMillis;
     private volatile boolean running = true;
 
-    public MetricsCollectionDaemon(final MetricsLogger logger, final long intervalMillis) {
+    public MetricsCollectionDaemon(final MetricsLogger logger, final long intervalMillis,
+            final MetricsOptions options) {
         super("filemetrics-collector");
         this.logger = logger;
-        this.collectors = Arrays.asList(
-                new HeapMetricsCollector(),
-                new ThreadMetricsCollector(),
-                new MetaspaceMetricsCollector(),
-                new GcMetricsCollector());
+        this.collectors = buildCollectors(options);
         this.intervalMillis = intervalMillis;
         setDaemon(true);
     }
@@ -52,5 +49,26 @@ public final class MetricsCollectionDaemon extends Thread {
         } catch (final InterruptedException e) {
             Thread.currentThread().interrupt();
         }
+    }
+
+    private static List<MetricsCollector> buildCollectors(final MetricsOptions options) {
+        final List<MetricsCollector> collectors = new ArrayList<>();
+        collectors.add(new HeapMetricsCollector());
+        collectors.add(new ThreadMetricsCollector());
+        collectors.add(new MetaspaceMetricsCollector());
+        collectors.add(new GcMetricsCollector());
+        if (options.directMemory()) {
+            collectors.add(new DirectMemoryMetricsCollector());
+        }
+        if (options.classLoading()) {
+            collectors.add(new ClassLoadingMetricsCollector());
+        }
+        if (options.cpu()) {
+            collectors.add(new CpuMetricsCollector());
+        }
+        if (options.codeCache()) {
+            collectors.add(new CodeCacheMetricsCollector());
+        }
+        return collectors;
     }
 }

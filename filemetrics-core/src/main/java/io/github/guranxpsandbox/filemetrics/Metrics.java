@@ -2,6 +2,7 @@ package io.github.guranxpsandbox.filemetrics;
 
 import io.github.guranxpsandbox.filemetrics.internal.MetricsCollectionDaemon;
 import io.github.guranxpsandbox.filemetrics.internal.MetricsLoggerResolver;
+import io.github.guranxpsandbox.filemetrics.internal.MetricsOptions;
 
 import java.io.File;
 import java.time.Duration;
@@ -13,7 +14,8 @@ import java.time.Duration;
  * thread collecting heap metrics on a fixed interval.
  * {@code Metrics.stop()} shuts the thread down and releases the logger.
  * Safe to call repeatedly; never throws to the caller.
- * Use {@link #builder()} to configure the log directory or interval.
+ * Use {@link #builder()} to configure the log directory, interval, or
+ * opt-in metrics.
  */
 public final class Metrics {
 
@@ -44,9 +46,9 @@ public final class Metrics {
     }
 
     private static synchronized void apply(final String appName, final File logDir,
-            final Duration interval) {
+            final Duration interval, final MetricsOptions options) {
         activeLogger = MetricsLoggerResolver.resolve(appName, logDir);
-        collectionDaemon = new MetricsCollectionDaemon(activeLogger, interval.toMillis());
+        collectionDaemon = new MetricsCollectionDaemon(activeLogger, interval.toMillis(), options);
         collectionDaemon.start();
     }
 
@@ -58,6 +60,10 @@ public final class Metrics {
         private String appName;
         private File logDir = DEFAULT_LOG_DIR;
         private Duration interval = DEFAULT_INTERVAL;
+        private boolean directMemory;
+        private boolean classLoading;
+        private boolean cpu;
+        private boolean codeCache;
 
         private Builder() {
         }
@@ -77,11 +83,33 @@ public final class Metrics {
             return this;
         }
 
+        public Builder withDirectMemory() {
+            this.directMemory = true;
+            return this;
+        }
+
+        public Builder withClassLoading() {
+            this.classLoading = true;
+            return this;
+        }
+
+        public Builder withCpu() {
+            this.cpu = true;
+            return this;
+        }
+
+        public Builder withCodeCache() {
+            this.codeCache = true;
+            return this;
+        }
+
         public void start() {
             if (appName == null) {
                 throw new IllegalStateException("appName must be set before calling start()");
             }
-            apply(appName, logDir, interval);
+            final MetricsOptions options =
+                    new MetricsOptions(directMemory, classLoading, cpu, codeCache);
+            apply(appName, logDir, interval, options);
         }
     }
 }

@@ -21,7 +21,7 @@ class MetricsCollectionDaemonIT {
         // given
         final InMemoryMetricsLogger logger = new InMemoryMetricsLogger();
         final MetricsCollectionDaemon daemon =
-                new MetricsCollectionDaemon(logger, SHORT_INTERVAL_MILLIS);
+                new MetricsCollectionDaemon(logger, SHORT_INTERVAL_MILLIS, MetricsOptions.defaults());
 
         // when
         daemon.start();
@@ -43,7 +43,7 @@ class MetricsCollectionDaemonIT {
         // given
         final InMemoryMetricsLogger logger = new InMemoryMetricsLogger();
         final MetricsCollectionDaemon daemon =
-                new MetricsCollectionDaemon(logger, SHORT_INTERVAL_MILLIS);
+                new MetricsCollectionDaemon(logger, SHORT_INTERVAL_MILLIS, MetricsOptions.defaults());
 
         // when
         daemon.start();
@@ -66,7 +66,7 @@ class MetricsCollectionDaemonIT {
         // given
         final InMemoryMetricsLogger logger = new InMemoryMetricsLogger();
         final MetricsCollectionDaemon daemon =
-                new MetricsCollectionDaemon(logger, SHORT_INTERVAL_MILLIS);
+                new MetricsCollectionDaemon(logger, SHORT_INTERVAL_MILLIS, MetricsOptions.defaults());
 
         // when
         daemon.start();
@@ -89,7 +89,7 @@ class MetricsCollectionDaemonIT {
         // given
         final InMemoryMetricsLogger logger = new InMemoryMetricsLogger();
         final MetricsCollectionDaemon daemon =
-                new MetricsCollectionDaemon(logger, SHORT_INTERVAL_MILLIS);
+                new MetricsCollectionDaemon(logger, SHORT_INTERVAL_MILLIS, MetricsOptions.defaults());
         final long gcBeanCount = ManagementFactory.getGarbageCollectorMXBeans().size();
 
         // when
@@ -112,6 +112,51 @@ class MetricsCollectionDaemonIT {
         }
     }
 
+    @Test
+    void shouldNotCollectOptInMetricsByDefault() throws InterruptedException {
+        // given
+        final InMemoryMetricsLogger logger = new InMemoryMetricsLogger();
+        final MetricsCollectionDaemon daemon =
+                new MetricsCollectionDaemon(logger, SHORT_INTERVAL_MILLIS, MetricsOptions.defaults());
+
+        // when
+        daemon.start();
+        try {
+            waitUntil(() -> countOfType(logger, "heap") >= 2);
+        } finally {
+            daemon.shutdown();
+        }
+
+        // then
+        assertEquals(0, countOfType(logger, "direct"));
+        assertEquals(0, countOfType(logger, "classloading"));
+        assertEquals(0, countOfType(logger, "cpu"));
+        assertEquals(0, countOfType(logger, "codecache"));
+    }
+
+    @Test
+    void shouldCollectOptInMetricsWhenEnabled() throws InterruptedException {
+        // given
+        final InMemoryMetricsLogger logger = new InMemoryMetricsLogger();
+        final MetricsOptions options = new MetricsOptions(true, true, true, true);
+        final MetricsCollectionDaemon daemon =
+                new MetricsCollectionDaemon(logger, SHORT_INTERVAL_MILLIS, options);
+
+        // when
+        daemon.start();
+        try {
+            waitUntil(() -> countOfType(logger, "codecache") >= 2);
+        } finally {
+            daemon.shutdown();
+        }
+
+        // then
+        assertTrue(countOfType(logger, "direct") >= 2);
+        assertTrue(countOfType(logger, "classloading") >= 2);
+        assertTrue(countOfType(logger, "cpu") >= 2);
+        assertTrue(countOfType(logger, "codecache") >= 2);
+    }
+
     private static long countOfType(final InMemoryMetricsLogger logger, final String type) {
         return logger.entries().stream().filter(entry -> type.equals(entry.type())).count();
     }
@@ -121,7 +166,7 @@ class MetricsCollectionDaemonIT {
         // given
         final InMemoryMetricsLogger logger = new InMemoryMetricsLogger();
         final MetricsCollectionDaemon daemon =
-                new MetricsCollectionDaemon(logger, SHORT_INTERVAL_MILLIS);
+                new MetricsCollectionDaemon(logger, SHORT_INTERVAL_MILLIS, MetricsOptions.defaults());
 
         // then
         assertTrue(daemon.isDaemon());
@@ -132,7 +177,7 @@ class MetricsCollectionDaemonIT {
         // given
         final InMemoryMetricsLogger logger = new InMemoryMetricsLogger();
         final MetricsCollectionDaemon daemon =
-                new MetricsCollectionDaemon(logger, SHORT_INTERVAL_MILLIS);
+                new MetricsCollectionDaemon(logger, SHORT_INTERVAL_MILLIS, MetricsOptions.defaults());
         daemon.start();
         waitUntil(() -> !logger.entries().isEmpty());
 
@@ -153,7 +198,7 @@ class MetricsCollectionDaemonIT {
         final InMemoryMetricsLogger logger = new InMemoryMetricsLogger();
         final long longInterval = 5_000L;
         final MetricsCollectionDaemon daemon =
-                new MetricsCollectionDaemon(logger, longInterval);
+                new MetricsCollectionDaemon(logger, longInterval, MetricsOptions.defaults());
         daemon.start();
         waitUntil(() -> !logger.entries().isEmpty());
 

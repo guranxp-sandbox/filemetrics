@@ -9,6 +9,7 @@ import java.time.Duration;
 import java.time.LocalDate;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -108,8 +109,56 @@ class MetricsIT {
         waitUntil(expectedFile::exists);
     }
 
+    @Test
+    void shouldNotCollectOptInMetricsByDefault() throws InterruptedException {
+        // given
+        System.setProperty("metrics.implementation", "inmemory");
+
+        // when
+        Metrics.builder()
+                .appName("order-service")
+                .interval(Duration.ofMillis(20L))
+                .start();
+
+        // then
+        waitUntil(() -> entryCount() >= 2);
+        assertEquals(0, entriesOfType("direct"));
+        assertEquals(0, entriesOfType("classloading"));
+        assertEquals(0, entriesOfType("cpu"));
+        assertEquals(0, entriesOfType("codecache"));
+    }
+
+    @Test
+    void shouldCollectOptInMetricsWhenEnabledOnBuilder() throws InterruptedException {
+        // given
+        System.setProperty("metrics.implementation", "inmemory");
+
+        // when
+        Metrics.builder()
+                .appName("order-service")
+                .interval(Duration.ofMillis(20L))
+                .withDirectMemory()
+                .withClassLoading()
+                .withCpu()
+                .withCodeCache()
+                .start();
+
+        // then
+        waitUntil(() -> entriesOfType("codecache") >= 2);
+        assertTrue(entriesOfType("direct") >= 2);
+        assertTrue(entriesOfType("classloading") >= 2);
+        assertTrue(entriesOfType("cpu") >= 2);
+        assertTrue(entriesOfType("codecache") >= 2);
+    }
+
     private static long entryCount() {
         return ((InMemoryMetricsLogger) Metrics.activeLogger).entries().size();
+    }
+
+    private static long entriesOfType(final String type) {
+        return ((InMemoryMetricsLogger) Metrics.activeLogger).entries().stream()
+                .filter(entry -> type.equals(entry.type()))
+                .count();
     }
 
     private static void waitUntil(final Condition condition) throws InterruptedException {

@@ -90,6 +90,7 @@ Metrics.builder()
     .withDirectMemory()            // opt-in
     .withClassLoading()            // opt-in
     .withCpu()                     // opt-in
+    .withCodeCache()               // opt-in
     .start();
 
 // Stop — symmetric with start
