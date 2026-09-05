@@ -39,7 +39,8 @@ filemetrics-autoinstrument    → automatic instrumentation via reflection
 1. **`final` everywhere** — every method parameter and local variable is
    declared `final`.
 2. **No external dependencies** in `filemetrics-core` — only
-   `java.lang.*`, `java.util.*`, `java.io.*`, `java.lang.management.*`.
+   `java.lang.*`, `java.util.*`, `java.io.*`, `java.lang.management.*`,
+   `java.time.*`. File I/O uses `java.io` (not `java.nio.file`).
 3. **Threading** — daemon threads for file writing and cleanup.
    `close()` shuts down both.
 4. **Error handling** — the host app is never affected by metrics
@@ -62,7 +63,8 @@ io.github.guranxpsandbox.filemetrics.internal ← non-public API
 - `MetricsLogger` interface — done
 - `NoOpMetricsLogger` — done (default)
 - `InMemoryMetricsLogger` — not started
-- `FileMetricsLogger` — not started
+- `FileMetricsLogger` — done (writes one line per metric group; no
+  rotation/cleanup/permissions yet)
 - `Metrics` (facade/entry point) — not started
 
 ## Workflow
