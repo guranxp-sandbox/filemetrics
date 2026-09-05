@@ -75,7 +75,9 @@ io.github.guranxpsandbox.filemetrics.internal ← non-public API
 - `InMemoryMetricsLogger` — done (inspectable, for tests)
 - `FileMetricsLogger` — done (writes one line per metric group; daily
   rotation is implicit in the filename, cleanup is handled by
-  `Metrics`' `CleanupDaemon`; file permissions (600) not started yet)
+  `Metrics`' `CleanupDaemon`, files are restricted to owner
+  read/write via `internal.FilePermissions`, approximating POSIX 600
+  through `java.io.File` — not an exact guarantee on every platform)
 - `Metrics` (facade/entry point) — done: `start(appName)` and
   `builder().appName(...).logDir(...).interval(Duration)
   .keepDays(...).withDirectMemory()...start()` resolve a

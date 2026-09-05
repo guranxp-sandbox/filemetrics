@@ -1,5 +1,6 @@
 package io.github.guranxpsandbox.filemetrics;
 
+import io.github.guranxpsandbox.filemetrics.internal.FilePermissions;
 import io.github.guranxpsandbox.filemetrics.internal.MetricLineFormatter;
 
 import java.io.File;
@@ -28,9 +29,12 @@ public final class FileMetricsLogger implements MetricsLogger {
     public void log(final String type, final Map<String, Object> values) {
         try {
             ensureLogDirExists();
+            final File file = currentLogFile();
+            file.createNewFile();
+            FilePermissions.restrictToOwner(file);
             final String line = MetricLineFormatter.format(
                     Instant.now(), appName, type, values);
-            try (FileWriter writer = new FileWriter(currentLogFile(), true)) {
+            try (FileWriter writer = new FileWriter(file, true)) {
                 writer.write(line);
                 writer.write(System.lineSeparator());
             }

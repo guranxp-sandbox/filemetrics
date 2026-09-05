@@ -1,15 +1,20 @@
 package io.github.guranxpsandbox.filemetrics;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.attribute.PosixFilePermission;
 import java.time.LocalDate;
+import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -84,6 +89,24 @@ class FileMetricsLoggerIT {
 
         // when / then
         assertDoesNotThrow(() -> logger.log("heap", new LinkedHashMap<>()));
+    }
+
+    @Test
+    @EnabledOnOs({OS.LINUX, OS.MAC})
+    void shouldRestrictFilePermissionsToOwnerOnly(@TempDir final File logDir)
+            throws IOException {
+        // given
+        final FileMetricsLogger logger = new FileMetricsLogger("order-service", logDir);
+
+        // when
+        logger.log("heap", new LinkedHashMap<>());
+
+        // then
+        final Set<PosixFilePermission> permissions =
+                Files.getPosixFilePermissions(logFile(logDir, "order-service").toPath());
+        assertEquals(
+                EnumSet.of(PosixFilePermission.OWNER_READ, PosixFilePermission.OWNER_WRITE),
+                permissions);
     }
 
     @Test
