@@ -1,64 +1,64 @@
 # filemetrics — Project Plan
 
-## Bakgrund
+## Background
 
-Vi undersöker varför minnesanvändningen är hög (~90%) på en Linux-maskin som kör
-ett antal Java- och C++-applikationer. För att förstå problemet behöver vi metrics
-per Java-app. Målet är ett återanvändbart open source-bibliotek på GitHub.
+We're investigating why memory usage is high (~90%) on a Linux machine running
+a number of Java and C++ applications. To understand the problem we need metrics
+per Java app. The goal is a reusable open source library on GitHub.
 
 ---
 
-## Projektbeslut
+## Project decisions
 
 ```
-Namn:         filemetrics
+Name:         filemetrics
 GitHub:       github.com/guranxp-sandbox/filemetrics
 Group id:     io.github.guranxp-sandbox
-Java minimum: 8 (bumpa till 21 i v2 när målapparna uppgraderas)
-Licens:       Apache 2.0
+Java minimum: 8 (bump to 21 in v2 once target apps upgrade)
+License:      Apache 2.0
 ```
 
 ---
 
-## API-stabilitetspolicy
+## API stability policy
 
-Publika klasser och metoder i `filemetrics-core` är stabila från v1.0.
-Inga breaking changes introduceras utan en ny major-version.
-Interna klasser (paket `*.internal`) räknas inte som publikt API.
+Public classes and methods in `filemetrics-core` are stable from v1.0.
+No breaking changes are introduced without a new major version.
+Internal classes (package `*.internal`) are not considered public API.
 
-Konsekvens för användare: uppgradering från v1.x till v1.y kräver
-aldrig kodändringar — bara ett uppdaterat versionsnummer i pom.xml.
-Uppgradering till v2 (Java 21) är frivillig och kräver enbart
-versionsbump — API:t är detsamma om det inte explicit annonseras som brutet.
+Consequence for users: upgrading from v1.x to v1.y never
+requires code changes — just an updated version number in pom.xml.
+Upgrading to v2 (Java 21) is optional and requires only a
+version bump — the API stays the same unless explicitly announced as broken.
 
 ---
 
-## Modulstruktur
+## Module structure
 
 ```
-filemetrics-core              → JVM- och custom metrics till fil, inga externa dependencies
-filemetrics-prometheus        → Micrometer + Prometheus-format, fil och/eller server
+filemetrics-core              → JVM and custom metrics to file, no external dependencies
+filemetrics-prometheus        → Micrometer + Prometheus format, file and/or server
 filemetrics-spring            → Spring Boot autoconfiguration
-filemetrics-autoinstrument    → automatisk instrumentering via reflection/aspekter
+filemetrics-autoinstrument    → automatic instrumentation via reflection/aspects
 ```
 
-### Beroenden mellan moduler
+### Dependencies between modules
 
 ```
-filemetrics-core          ← bas, inga externa dependencies
-filemetrics-prometheus    → drar in filemetrics-core + micrometer-core + micrometer-registry-prometheus
-filemetrics-spring        → drar in filemetrics-core + spring-boot-actuator
-filemetrics-autoinstrument → drar in filemetrics-core + micrometer-core
+filemetrics-core          ← base, no external dependencies
+filemetrics-prometheus    → pulls in filemetrics-core + micrometer-core + micrometer-registry-prometheus
+filemetrics-spring        → pulls in filemetrics-core + spring-boot-actuator
+filemetrics-autoinstrument → pulls in filemetrics-core + micrometer-core
 ```
 
 ---
 
 ## filemetrics-core
 
-### Syfte
-Samla JVM-metrics och custom metrics och skriva till fil. Inga externa dependencies — bara java.lang.management.
+### Purpose
+Collect JVM metrics and custom metrics and write them to file. No external dependencies — only java.lang.management.
 
-### Default metrics (alltid på)
+### Default metrics (always on)
 ```
 Heap        → used, committed, max
 Metaspace   → used, committed
@@ -70,61 +70,61 @@ GC          → count, time per collector
 ```
 Direct memory   → used, count
 Code cache      → used
-Klassladdning   → loaded, unloaded
+Class loading   → loaded, unloaded
 CPU             → process load, system load
 ```
 
 ### API
 
 ```java
-// Minimal — en rad
+// Minimal — one line
 Metrics.start("order-service");
 
-// Med konfiguration
+// With configuration
 Metrics.builder()
     .appName("order-service")
     .logDir("/var/log/metrics")   // default: ./metrics
     .interval(60, TimeUnit.MINUTES) // default: 60 min
-    .keepDays(7)                   // default: 7 dagar
+    .keepDays(7)                   // default: 7 days
     .withDirectMemory()            // opt-in
     .withClassLoading()            // opt-in
     .withCpu()                     // opt-in
     .start();
 
-// Stoppa — symmetri med start
+// Stop — symmetric with start
 Metrics.stop();
 ```
 
-### Implementationer
+### Implementations
 
-Styrs via system property `metrics.implementation`:
+Selected via the system property `metrics.implementation`:
 
 ```
-file      → FileMetricsLogger, skriver till fil
-inmemory  → InMemoryMetricsLogger, håller i minne (för tester)
-noop      → NoOpMetricsLogger, gör ingenting (DEFAULT)
+file      → FileMetricsLogger, writes to file
+inmemory  → InMemoryMetricsLogger, keeps in memory (for tests)
+noop      → NoOpMetricsLogger, does nothing (DEFAULT)
 ```
 
 ```bash
-# Aktivera filloggning
+# Enable file logging
 -Dmetrics.implementation=file
 
-# Default — gör ingenting
+# Default — does nothing
 java -jar app.jar
 ```
 
 ### ServiceLoader
 
-Implementationen väljs via ServiceLoader:
+The implementation is selected via ServiceLoader:
 
 ```
 src/main/resources/META-INF/services/io.github.guranxp-sandbox.filemetrics.MetricsLogger
-→ innehåller alla tre implementationer
+→ contains all three implementations
 ```
 
-### Filformat
+### File format
 
-Key-value, en rad per metric-grupp:
+Key-value, one line per metric group:
 
 ```
 2026-08-27T10:00:00Z app=order-service type=heap used_mb=312 committed_mb=400 max_mb=1024
@@ -141,17 +141,17 @@ Opt-in:
 2026-08-27T10:00:00Z app=order-service type=cpu process_load=0.45 system_load=0.67
 ```
 
-### Filhantering
+### File handling
 
 ```
-Ny fil per dag:   order-service-2026-08-27.log
-Rotation:         daglig, automatisk
-Cleanup:          filer äldre än keepDays raderas automatiskt
-Rättigheter:      sätts automatiskt vid skapande (600)
-Fel:              varning i stderr, fallback till noop, appen påverkas aldrig
+New file per day:  order-service-2026-08-27.log
+Rotation:          daily, automatic
+Cleanup:           files older than keepDays are deleted automatically
+Permissions:       set automatically on creation (600)
+Errors:            warning to stderr, fallback to noop, the app is never affected
 ```
 
-### Konfiguration via properties
+### Configuration via properties
 
 ```
 metrics.implementation=file|inmemory|noop
@@ -164,59 +164,59 @@ metrics.opt.cpu=false
 metrics.opt.codecache=false
 ```
 
-### Trådning
+### Threading
 
 ```
-En daemon-tråd för filskrivning
-En daemon-tråd för cleanup
-Metrics.stop() stänger båda
+One daemon thread for file writing
+One daemon thread for cleanup
+Metrics.stop() shuts down both
 ```
 
-### Säkerhet
+### Security
 
 ```
-Filrättigheter sätts automatiskt (600)
-Appen startar alltid oavsett metrics-fel
-Varning i stderr vid problem
+File permissions set automatically (600)
+The app always starts regardless of metrics errors
+Warning to stderr on problems
 ```
 
-### Testning
+### Testing
 
 ```
-InMemoryMetricsLogger → unit/integrationstester, inspekterbar
-NoOpMetricsLogger     → tester som inte bryr sig om metrics
-Metrics.stop()        → städa upp trådar i teardown
+InMemoryMetricsLogger → unit/integration tests, inspectable
+NoOpMetricsLogger     → tests that don't care about metrics
+Metrics.stop()        → clean up threads in teardown
 ```
 
 ---
 
 ## filemetrics-prometheus
 
-### Syfte
-Prometheus-format via Micrometer. Pluggar in i Micrometer som ett eget MeterRegistry.
+### Purpose
+Prometheus format via Micrometer. Plugs into Micrometer as its own MeterRegistry.
 
-### Lägen
+### Modes
 
 ```
-Fil-läge    → Prometheus-format till fil, default
-Server-läge → HTTP endpoint /metrics, kräver konfiguration
-Båda        → fil + server simultaneously
+File mode    → Prometheus format to file, default
+Server mode  → HTTP endpoint /metrics, requires configuration
+Both         → file + server simultaneously
 ```
 
-### Fil-läge
-Fungerar direkt utan konfiguration — default om port inte är satt.
+### File mode
+Works out of the box with no configuration — default if no port is set.
 
-### Server-läge
-Startar bara om explicit konfigurerat:
+### Server mode
+Only starts if explicitly configured:
 
 ```
 metrics.prometheus.port=9090
 metrics.prometheus.allowed.ips=192.168.1.100
 ```
 
-Om inte konfigurerat → ingen server, appen påverkas inte.
+If not configured → no server, the app is unaffected.
 
-### Konfiguration
+### Configuration
 
 ```
 metrics.prometheus.mode=file|server|both
@@ -226,16 +226,16 @@ metrics.prometheus.file.enabled=true
 metrics.prometheus.file.dir=/var/log/metrics
 ```
 
-### Webbserver utan extra dependency
+### Web server with no extra dependency
 
 ```java
-// com.sun.net.httpserver — inbyggt i JDK
+// com.sun.net.httpserver — built into the JDK
 HttpServer server = HttpServer.create(new InetSocketAddress(9090), 0);
 ```
 
-### Filformat
+### File format
 
-Prometheus-format med timestamp per metric:
+Prometheus format with a timestamp per metric:
 
 ```
 jvm_memory_used_bytes{area="heap"} 327155712 1724580000000
@@ -246,8 +246,8 @@ jvm_threads_live_threads 94 1724580000000
 
 ## filemetrics-spring
 
-### Syfte
-Zero-config integration med Spring Boot via autoconfiguration.
+### Purpose
+Zero-config integration with Spring Boot via autoconfiguration.
 
 ### Autoconfiguration
 
@@ -256,26 +256,26 @@ META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports
 → io.github.guranxp-sandbox.filemetrics.spring.MetricsAutoConfiguration
 ```
 
-### Webbserver-detektering
+### Web server detection
 
 ```
-Webbserver finns    → Actuator + befintlig server (Tomcat/Undertow/Jetty)
-Ingen webbserver    → com.sun.net.httpserver
-Ingen server alls   → fil-läge
+Web server present    → Actuator + existing server (Tomcat/Undertow/Jetty)
+No web server         → com.sun.net.httpserver
+No server at all      → file mode
 ```
 
-Användaren kan även explicit välja:
+The user can also explicitly choose:
 ```
 metrics.server.type=actuator|lightweight
 ```
 
-### Lägen
+### Modes
 
 ```
 metrics.mode=file|server|both
 ```
 
-### Konfiguration via application.properties
+### Configuration via application.properties
 
 ```
 metrics.enabled=true
@@ -286,7 +286,7 @@ metrics.file.keep-days=7
 management.endpoints.web.exposure.include=prometheus
 ```
 
-### Spring-profiler
+### Spring profiles
 
 ```
 # application-local.properties
@@ -301,37 +301,37 @@ metrics.enabled=false
 
 ## filemetrics-autoinstrument
 
-### Syfte
-Automatisk instrumentering av kända bibliotek via reflection och Micrometer.
+### Purpose
+Automatic instrumentation of known libraries via reflection and Micrometer.
 
-### Aktivering
+### Activation
 
 ```java
 Metrics.start("order-service").autoInstrument();
 ```
 
-### Vad som instrumenteras automatiskt
+### What gets instrumented automatically
 
 ```
 HikariCP        → connection pool metrics
-ExecutorService → trådpool metrics
-RestTemplate    → utgående HTTP metrics
-WebClient       → utgående HTTP metrics
-OkHttpClient    → utgående HTTP metrics
-JDBC            → databasanrop
+ExecutorService → thread pool metrics
+RestTemplate    → outgoing HTTP metrics
+WebClient       → outgoing HTTP metrics
+OkHttpClient    → outgoing HTTP metrics
+JDBC            → database calls
 ```
 
-### Hur
+### How
 
-Via reflection — kollar om klassen finns i classpath:
+Via reflection — checks whether the class is present on the classpath:
 
 ```java
 if (isPresent("com.zaxxer.hikari.HikariDataSource")) {
-    // instrumentera HikariCP automatiskt
+    // instrument HikariCP automatically
 }
 ```
 
-### Manuell instrumentering av trådpooler
+### Manual instrumentation of thread pools
 
 ```java
 ExecutorService pool = Executors.newFixedThreadPool(10);
@@ -340,27 +340,27 @@ ExecutorServiceMetrics.monitor(registry, pool, "zeromq-pool");
 
 ---
 
-## Generella principer
+## General principles
 
 ```
-Appen påverkas aldrig av metrics-problem
-Varning i stderr vid fel, aldrig exception mot appen
-Default är noop — måste explicit aktiveras
-start() / stop() symmetri
-Minimal minnesåtgång — core har inga externa dependencies
-Fallback till noop om fil inte kan skapas
+The app is never affected by metrics problems
+Warning to stderr on error, never an exception to the app
+Default is noop — must be explicitly enabled
+start() / stop() symmetry
+Minimal memory footprint — core has no external dependencies
+Fallback to noop if the file can't be created
 ```
 
 ---
 
-## Nästa steg
+## Next steps
 
-1. Sätt upp GitHub repo (guranxp-sandbox/filemetrics) med Maven multi-module struktur
-2. Börja med filemetrics-core
-3. Implementera FileMetricsLogger
-4. Implementera InMemoryMetricsLogger och NoOpMetricsLogger
-5. Lägg till tester
-6. Bygg filemetrics-prometheus
-7. Bygg filemetrics-spring
-8. Bygg filemetrics-autoinstrument
-9. Dokumentation och README
+1. Set up GitHub repo (guranxp-sandbox/filemetrics) with Maven multi-module structure
+2. Start with filemetrics-core
+3. Implement FileMetricsLogger
+4. Implement InMemoryMetricsLogger and NoOpMetricsLogger
+5. Add tests
+6. Build filemetrics-prometheus
+7. Build filemetrics-spring
+8. Build filemetrics-autoinstrument
+9. Documentation and README

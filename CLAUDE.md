@@ -1,62 +1,62 @@
 # filemetrics
 
-Open source Java-bibliotek som skriver JVM-metrics och custom metrics till fil — utan externa dependencies i core-modulen.
+Open source Java library that writes JVM metrics and custom metrics to file — no external dependencies in the core module.
 
-## Syfte
+## Purpose
 
-Enklaste möjliga sättet att logga metrics från en Java-app till fil, utan krav på Prometheus, Grafana eller annan infrastruktur. En rad kod: `Metrics.start("app-name")`.
+The simplest possible way to log metrics from a Java app to file, without requiring Prometheus, Grafana, or other infrastructure. One line of code: `Metrics.start("app-name")`.
 
-## Projektbeslut
+## Project decisions
 
 ```
-Namn:         filemetrics
+Name:         filemetrics
 GitHub:       https://github.com/guranxp-sandbox/filemetrics
 Group id:     io.github.guranxpsandbox
-Java minimum: 8 (bumpa till 21 i v2 när målapparna uppgraderas)
-Licens:       Apache 2.0
+Java minimum: 8 (bump to 21 in v2 once target apps upgrade)
+License:      Apache 2.0
 ```
 
-## API-stabilitetspolicy
+## API stability policy
 
-Publika klasser och metoder i `filemetrics-core` är stabila från v1.0.
-Inga breaking changes introduceras utan en ny major-version.
-Interna klasser (paket `*.internal`) räknas inte som publikt API.
+Public classes and methods in `filemetrics-core` are stable from v1.0.
+No breaking changes are introduced without a new major version.
+Internal classes (package `*.internal`) are not considered public API.
 
-## Modulstruktur
+## Module structure
 
 ```
-filemetrics-core              → JVM- och custom metrics till fil, inga externa dependencies
-filemetrics-prometheus        → Micrometer + Prometheus-format, fil och/eller server
+filemetrics-core              → JVM and custom metrics to file, no external dependencies
+filemetrics-prometheus        → Micrometer + Prometheus format, file and/or server
 filemetrics-spring            → Spring Boot autoconfiguration
-filemetrics-autoinstrument    → automatisk instrumentering via reflection
+filemetrics-autoinstrument    → automatic instrumentation via reflection
 ```
 
-## Java-kodstandard (filemetrics-core)
+## Java code standard (filemetrics-core)
 
-1. **`final` everywhere** — varje metodparameter och lokal variabel deklareras `final`.
-2. **Inga externa dependencies** i `filemetrics-core` — bara `java.lang.*`, `java.util.*`, `java.io.*`, `java.lang.management.*`.
-3. **Trådning** — daemon-trådar för filskrivning och cleanup. `close()` stänger båda.
-4. **Felhantering** — appen påverkas aldrig av metrics-problem. Varning i stderr, aldrig exception mot anroparen. Fallback till noop om fil inte kan skapas.
-5. **Filformat** — key-value, en rad per metric-grupp:
+1. **`final` everywhere** — every method parameter and local variable is declared `final`.
+2. **No external dependencies** in `filemetrics-core` — only `java.lang.*`, `java.util.*`, `java.io.*`, `java.lang.management.*`.
+3. **Threading** — daemon threads for file writing and cleanup. `close()` shuts down both.
+4. **Error handling** — the host app is never affected by metrics problems. Warning to stderr, never an exception to the caller. Falls back to noop if the file can't be created.
+5. **File format** — key-value, one line per metric group:
    ```
    2026-08-27T10:00:00Z app=order-service type=heap used_mb=312 committed_mb=400 max_mb=1024
    ```
 
-## Paket
+## Packages
 
 ```
-io.github.guranxpsandbox.filemetrics   ← publikt API
-io.github.guranxpsandbox.filemetrics.internal ← ej publikt API
+io.github.guranxpsandbox.filemetrics   ← public API
+io.github.guranxpsandbox.filemetrics.internal ← non-public API
 ```
 
-## Nuläge
+## Current status
 
-- `MetricsLogger` interface — klart
-- `NoOpMetricsLogger` — klart (default)
-- `InMemoryMetricsLogger` — ej påbörjad
-- `FileMetricsLogger` — ej påbörjad
-- `Metrics` (fasad/entry point) — ej påbörjad
+- `MetricsLogger` interface — done
+- `NoOpMetricsLogger` — done (default)
+- `InMemoryMetricsLogger` — not started
+- `FileMetricsLogger` — not started
+- `Metrics` (facade/entry point) — not started
 
 ## Workflow
 
-Se WORKFLOW.md.
+See WORKFLOW.md.

@@ -1,21 +1,21 @@
 # Development Workflow
 
-## Regler
+## Rules
 
-1. **Aldrig implementera utan explicit godkännande.**
-   Presentera alltid planen först och vänta på "ok" eller "kör" innan kod skrivs eller ändringar görs.
+1. **Never implement without explicit approval.**
+   Always present the plan first and wait for "ok" or "go" before code is written or changes are made.
 
 2. **Explore → Plan → Code.**
-   Visa plan innan kod skrivs för varje ny avgränsad del.
+   Show the plan before code is written for each new, well-scoped piece of work.
 
-3. **Små steg. TDD.**
-   Tester skrivs före implementation.
+3. **Small steps. TDD.**
+   Tests are written before implementation.
 
-4. **Efter varje litet steg:**
-   Visa diff + testresultat. Commit endast efter användarens godkännande.
+4. **After every small step:**
+   Show diff + test results. Commit only after the user's approval.
 
 ## Git
 
 - Remote: https://github.com/guranxp-sandbox/filemetrics
 - Branch: main
-- Commit-meddelanden på engelska, korta och beskrivande
+- Commit messages in English, short and descriptive
