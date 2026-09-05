@@ -13,35 +13,47 @@ class NoOpMetricsLoggerTest {
     private final MetricsLogger logger = new NoOpMetricsLogger();
 
     @Test
-    void logWithValuesDoesNotThrow() {
-        Map<String, Object> values = new HashMap<>();
+    void shouldNotThrowWhenLoggingWithValues() {
+        // given
+        final Map<String, Object> values = new HashMap<>();
         values.put("used_mb", 312);
         values.put("committed_mb", 400);
 
+        // when / then
         assertDoesNotThrow(() -> logger.log("heap", values));
     }
 
     @Test
-    void logWithEmptyMapDoesNotThrow() {
-        assertDoesNotThrow(() -> logger.log("heap", Collections.emptyMap()));
+    void shouldNotThrowWhenLoggingWithEmptyMap() {
+        // given
+        final Map<String, Object> values = Collections.emptyMap();
+
+        // when / then
+        assertDoesNotThrow(() -> logger.log("heap", values));
     }
 
     @Test
-    void logWithNullValueInMapDoesNotThrow() {
-        Map<String, Object> values = new HashMap<>();
+    void shouldNotThrowWhenLoggingWithNullValueInMap() {
+        // given
+        final Map<String, Object> values = new HashMap<>();
         values.put("name", null);
 
+        // when / then
         assertDoesNotThrow(() -> logger.log("gc", values));
     }
 
     @Test
-    void closeDoesNotThrow() {
+    void shouldNotThrowWhenClosing() {
+        // when / then
         assertDoesNotThrow(logger::close);
     }
 
     @Test
-    void closeCanBeCalledMultipleTimesWithoutSideEffects() {
+    void shouldNotThrowWhenClosingMultipleTimes() {
+        // given
         logger.close();
+
+        // when / then
         assertDoesNotThrow(logger::close);
     }
 }
