@@ -2,9 +2,9 @@
 
 ## Background
 
-We're investigating why memory usage is high (~90%) on a Linux machine running
-a number of Java and C++ applications. To understand the problem we need metrics
-per Java app. The goal is a reusable open source library on GitHub.
+In order to investigate memory usage on a Linux machine running
+a number of Java and C++ applications, metrics per Java app is needed.
+The goal is a reusable open source library on GitHub.
 
 ---
 
